@@ -1,0 +1,52 @@
+Azure:
+  models:
+    gpt4:
+      price:
+        unit: usd
+        prompt: 0.03
+        completion: 0.06
+      deployment:
+        deployment_id: gpt-4_rb
+        api_version: 2023-05-15
+      context_length: 8
+      available: 1
+      encoding: cl100k_base
+    gpt4-16k:
+      price:
+        unit: usd
+        prompt: 0.06
+        completion: 0.12
+      deployment:
+        deployment_id: gpt-4-32k_rb
+        api_version: 2023-05-15
+      context_length: 32
+      available: 1
+      encoding: cl100k_base
+    gpt-35-turbo:
+      price:
+        unit: usd
+        prompt: 0.002
+        completion: 0.002
+      context_length: 4
+      available: 1
+      deployment:
+        deployment_id: 35default
+        api_version: 2023-05-15
+      encoding: cl100k_base
+    gpt-35-turbo-16k:
+      price:
+        unit: usd
+        prompt: 0.002
+        completion: 0.002
+      context_length: 16
+      available: 1
+      deployment:
+        deployment_id: 3516k
+        api_version: 2023-05-15
+      encoding: cl100k_base
+
+  account:
+    api-key: *****
+    endpoint: https://**********.openai.azure.com/
+
+
