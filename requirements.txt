@@ -1,2 +1,12 @@
 arxiv
 beautifulsoup4
+loguru
+pytz
+PyPDF2
+langchain
+PyYaml
+tiktoken
+retrying
+openai
+tenacity
+tqdm
