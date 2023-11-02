@@ -8,6 +8,8 @@ class ChatModelLangchain:
     def __init__(self, config_yaml_path=None):
         config_yaml_path = Path(
             __file__).parent.parent.parent.absolute() / 'configs' / 'llm_configs.yaml' if not config_yaml_path else config_yaml_path
+        if isinstance(config_yaml_path, str):
+            config_yaml_path = Path(config_yaml_path)
         if not config_yaml_path.exists():
             raise Exception(f"LLM general config file not found: path doesnt exists {config_yaml_path}")
         with open(config_yaml_path, 'r') as f:

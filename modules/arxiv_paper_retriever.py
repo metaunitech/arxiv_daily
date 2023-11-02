@@ -23,13 +23,14 @@ QUERY_ABBR_MAPPING = {'title': 'ti',
 
 
 class PaperRetriever:
-    def __init__(self, storage_path):
+    def __init__(self, storage_path: str):
         self.__storage_path_base = Path(storage_path)
         os.makedirs(self.__storage_path_base, exist_ok=True)
         self.__log_path = self.__storage_path_base / 'logs' / str(datetime.now().strftime('%Y-%m-%d'))
-        self.__raw_paper_storage_path = self.__storage_path_base / 'paper_raw' / str(
-            datetime.now().strftime('%Y-%m-%d'))
-        os.makedirs(self.__raw_paper_storage_path, exist_ok=True)
+        self.__raw_paper_storage_path = self.__storage_path_base / 'paper_raw'
+        self.__raw_paper_storage_daily_path = (self.__storage_path_base / str(datetime.now().strftime('%Y-%m-%d')) /
+                                               f'batch_{str(int(time.time()))}')
+        os.makedirs(self.__raw_paper_storage_daily_path, exist_ok=True)
 
     @staticmethod
     def retrieve_topic_w_regex(summary_regex=None,
@@ -99,7 +100,7 @@ class PaperRetriever:
     @staticmethod
     def sanitize_filename(filename):
         # 使用正则表达式替换不支持的字符为下划线
-        sanitized_filename = re.sub(r'[\/:*?"<>|]', '_', filename)
+        sanitized_filename = re.sub(r'[\/:*?"<>|]', ' ', filename)
         return sanitized_filename
 
     @tenacity.retry(wait=tenacity.wait_exponential(multiplier=1, min=4, max=10),
@@ -112,7 +113,7 @@ class PaperRetriever:
         if target_downloaded_path.exists():
             logger.warning(f"Already downloaded at {target_downloaded_path}")
             return str(target_downloaded_path.absolute())
-        downloaded_path = result_instance.download_pdf(dirpath=str(self.__raw_paper_storage_path),
+        downloaded_path = result_instance.download_pdf(dirpath=str(self.__raw_paper_storage_daily_path),
                                                        filename=downloaded_name + '.pdf')
         logger.success(f"Downloaded at {downloaded_path}")
         return downloaded_path
@@ -124,11 +125,13 @@ class PaperRetriever:
              target_primary_category=None,
              publish_time_range=None,
              diy_query_str=None,
+             bulk_description=None,
+             field=None,
              **kwargs):
         download_lock = threading.Lock()
         download_history_dict = {}
 
-        def download_and_store(res_entry, progress_bar):
+        def download_and_store(res_entry):
             try:
                 downloaded_path = self.download(res_entry)
                 entry_dict = res_entry.__dict__
@@ -141,7 +144,7 @@ class PaperRetriever:
                 logger.error(f'Error in download_and_store: {e}')
 
         # 创建一个ThreadPoolExecutor，限制同时并发的线程数量为10
-        max_workers = 10
+        max_workers = 2
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # 获取迭代器的结果并存储在列表中
             task_list = list(self.retrieve_topic_w_regex(summary_regex, title_regex, journal_ref_regex,
@@ -157,7 +160,7 @@ class PaperRetriever:
 
             for res_entry in task_list:
                 # 提交下载任务到线程池
-                future = executor.submit(download_and_store, res_entry, progress_bar)
+                future = executor.submit(download_and_store, res_entry)
 
                 # 添加回调函数，以便在任务完成时更新进度条
                 future.add_done_callback(lambda p: progress_bar.update(1))
@@ -168,11 +171,28 @@ class PaperRetriever:
         # 关闭tqdm进度条
         progress_bar.close()
 
+        task_description_dict = {}
+        task_description_dict.update(kwargs)
+        task_description_dict.update({'field': field,
+                                      'description': bulk_description,
+                                      'publish_time_range': [str(i) for i in
+                                                             publish_time_range] if publish_time_range else None})
+        task_description_dict.update({'download_history': download_history_dict})
+
         logger.success(f'Retrieved {len(download_history_dict.keys())} entries.')
-        with open(self.__raw_paper_storage_path / f'download_history_{str(int(time.time()))}.json', 'w',
-                  encoding='utf-8') as f:
-            json.dump(download_history_dict, f, indent=4, ensure_ascii=False)
-        return download_history_dict
+        output_path = self.__raw_paper_storage_daily_path / f'download_history.json'
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(task_description_dict, f, indent=4, ensure_ascii=False)
+        return output_path
+
+    def __call__(self, *args, **kwargs):
+        """
+        Wrapper function.
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        return self.main(*args, **kwargs)
 
 
 if __name__ == "__main__":
@@ -200,6 +220,6 @@ if __name__ == "__main__":
     # for i in res:
     #     print(i)
     # print(res)
-    instance.main(diy_query_str='all:LLM OR all:Agent OR all:agent OR all:llm OR all:GPT OR all:gpt',
+    instance.main(diy_query_str='all:LLM OR all:Agent OR all:agent OR all:llm OR all:GPT OR all:gpt OR all:chat',
                   # target_primary_category=['cs'],
                   publish_time_range=[yesterday_start, today_start])
