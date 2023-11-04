@@ -116,8 +116,8 @@ class Paper:
                 space_split_list = line.split(' ')
                 if 1 < len(space_split_list) < 5:
                     if 1 < len(point_split_list) < 5 and (
-                            point_split_list[0] in self.roman_num or point_split_list[0] in self.digit_num):
-                        logger.debug("line:", line)
+                            point_split_list[0]+'\n' in self.roman_num or point_split_list[0]+'\n' in self.digit_num):
+                        logger.debug(f"line: {line}")
                         chapter_names.append(line)
                         # 这段代码可能会有新的bug，本意是为了消除"Introduction"的问题的！
                     elif 1 < len(point_split_list) < 5:
@@ -143,28 +143,29 @@ class Paper:
                             max_font_size = font_size  # 更新最大值
                             max_string = block["lines"][0]["spans"][0]["text"]  # 更新最大值对应的字符串
         max_font_sizes.sort()
-        logger.debug("max_font_sizes", max_font_sizes[-10:])
+        self.font_sizes_list = max_font_sizes
+        logger.debug(f"max_font_sizes {max_font_sizes[-10:]}")
         cur_title = ''
         for page_index, page in enumerate(doc):  # 遍历每一页
             text = page.get_text("dict")  # 获取页面上的文本信息
             blocks = text["blocks"]  # 获取文本块列表
             for block in blocks:  # 遍历每个文本块
                 if block["type"] == 0 and len(block['lines']):  # 如果是文字类型
-                    if len(block["lines"][0]["spans"]):
-                        cur_string = block["lines"][0]["spans"][0]["text"]  # 更新最大值对应的字符串
-                        # font_flags = block["lines"][0]["spans"][0]["flags"]  # 获取第一行第一段文字的字体特征
-                        font_size = block["lines"][0]["spans"][0]["size"]  # 获取第一行第一段文字的字体大小
-                        # print(font_size)
-                        if abs(font_size - max_font_sizes[-1]) < 0.3 or abs(font_size - max_font_sizes[-2]) < 0.3:
-                            # print("The string is bold.", max_string, "font_size:", font_size, "font_flags:", font_flags)
-                            if len(cur_string) > 4 and "arXiv" not in cur_string:
+                    for line in block['lines']:
+                        if len(line["spans"]):
+                            cur_string = line["spans"][0]["text"]  # 更新最大值对应的字符串
+                            # font_flags = line["spans"][0]["flags"]  # 获取第一行第一段文字的字体特征
+                            font_size = line["spans"][0]["size"]  # 获取第一行第一段文字的字体大小
+                            # print(font_size)
+                            if abs(font_size - max_font_sizes[-1]) < 0.3 or abs(font_size - max_font_sizes[-2]) < 0.3:
                                 # print("The string is bold.", max_string, "font_size:", font_size, "font_flags:", font_flags)
-                                if cur_title == '':
-                                    cur_title += cur_string
-                                else:
-                                    cur_title += ' ' + cur_string
-                            self.title_page = page_index
-                            # break
+                                if len(cur_string) > 4 and "arXiv" not in cur_string:
+                                    # print("The string is bold.", max_string, "font_size:", font_size, "font_flags:", font_flags)
+                                    if cur_title == '':
+                                        cur_title += cur_string
+                                    else:
+                                        cur_title += ' ' + cur_string
+                                self.title_page = page_index
         title = cur_title.replace('\n', ' ')
         return title
 
@@ -265,9 +266,10 @@ class Paper:
 
 
 def main():
-    path = r'W:\Personal_Project\metaunitech\arxiv_daily\modules\paper_raw\2023-10-26\Mixture of Tokens_ Efficient LLMs through Cross-Example Aggregation.pdf'
+    path = r'W:\Personal_Project\metaunitech\arxiv_daily\storage\2023-11-02\batch_1698909636\Little Giants  Exploring the Potential of Small LLMs as Evaluation Metrics in Summarization in the Eval4NLP 2023 Shared Task.pdf'
     paper = Paper(path=path)
     paper.parse_pdf()
+    paper.get_chapter_names()
     for key, value in paper.section_text_dict.items():
         logger.debug(f"{key}, {value}")
         logger.debug("*" * 40)
