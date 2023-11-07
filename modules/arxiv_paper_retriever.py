@@ -113,7 +113,7 @@ class PaperRetriever:
         if target_downloaded_path.exists():
             logger.warning(f"Already downloaded at {target_downloaded_path}")
             return str(target_downloaded_path.absolute())
-        downloaded_path = result_instance.download_pdf(dirpath=str(self.__raw_paper_storage_daily_path),
+        downloaded_path = result_instance.download_pdf(dirpath=str(self.__raw_paper_storage_path),
                                                        filename=downloaded_name + '.pdf')
         logger.success(f"Downloaded at {downloaded_path}")
         return downloaded_path

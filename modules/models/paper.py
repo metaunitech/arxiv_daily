@@ -266,7 +266,7 @@ class Paper:
 
 
 def main():
-    path = r'W:\Personal_Project\metaunitech\arxiv_daily\storage\2023-11-02\batch_1698909636\Little Giants  Exploring the Potential of Small LLMs as Evaluation Metrics in Summarization in the Eval4NLP 2023 Shared Task.pdf'
+    path = r'J:\Arxiv\paper_raw\A Definition of Open-Ended Learning Problems for Goal-Conditioned Agents.pdf'
     paper = Paper(path=path)
     paper.parse_pdf()
     paper.get_chapter_names()

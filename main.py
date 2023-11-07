@@ -73,6 +73,7 @@ class MainFlow:
         llm_engine_generator = ChatModelLangchain(config_yaml_path=llm_config_path)
         self.llm_engine = llm_engine_generator.generate_llm_model('Azure', model_selected)
         self.paper_retriever = PaperRetriever(storage_path)
+        logger.info(f'Paper retriever storage base path set to : {storage_path}')
         self.paper_parser = PaperParser(self.llm_engine, target_language)
         self.paper_analyzer = BulkAnalysis(self.llm_engine, self.paper_parser)
         logger.success("Environment initialized.")
