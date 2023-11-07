@@ -78,6 +78,7 @@ This is the <summary> and <Method> part of an English document, where <summary> 
                     ....... \n\n     
                  
                  Be sure to use {self.__default_language} answers (proper nouns need to be marked in English), statements as concise and academic as possible, do not repeat the content of the previous <summary>, the value of the use of the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed, ....... means fill in according to the actual requirements, if not, you can not write.                 
+                 Be sure to keep total length of output less than {self.__llm_engine.max_tokens}
                  """
             chat_method_text = self.__llm_engine.predict(prompt)
         return chat_method_text
