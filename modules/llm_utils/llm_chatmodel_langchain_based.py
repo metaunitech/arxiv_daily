@@ -2,14 +2,12 @@ from pathlib import Path
 from langchain.chat_models import AzureChatOpenAI
 import yaml
 from loguru import logger
-
+from .llm_chatglm_requst_based import ChatglmWrapperLangchain
 
 class ChatModelLangchain:
     def __init__(self, config_yaml_path=None):
         config_yaml_path = Path(
             __file__).parent.parent.parent.absolute() / 'configs' / 'llm_configs.yaml' if not config_yaml_path else config_yaml_path
-        if isinstance(config_yaml_path, str):
-            config_yaml_path = Path(config_yaml_path)
         if not config_yaml_path.exists():
             raise Exception(f"LLM general config file not found: path doesnt exists {config_yaml_path}")
         with open(config_yaml_path, 'r') as f:
@@ -44,6 +42,10 @@ class ChatModelLangchain:
                 callbacks=[],
                 **kwargs
             )
+        elif platform == 'Zhipu':
+            logger.debug(f"Model info: {__target_model_configs}")
+            logger.debug(f"Model extra params: {kwargs}")
+            chat_model = ChatglmWrapperLangchain()
         else:
             logger.error(f"Platform {platform} is not implemented.")
 
@@ -51,6 +53,6 @@ class ChatModelLangchain:
 
 
 if __name__ == "__main__":
-    instance = ChatModelLangchain()
-    model = instance.generate_llm_model('Azure', 'gpt-35-turbo')
+    instance = ChatModelLangchain(Path(r"J:\Miscellaneous\NLP\universal_nlp_task_server\configs\llm_configs.yaml"))
+    model = instance.generate_llm_model('Zhipu', 'gpt-35-turbo')
     print("HERE")

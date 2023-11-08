@@ -71,7 +71,7 @@ class MainFlow:
     def initialize_environment(self, llm_config_path, model_selected, target_language, storage_path):
         logger.info("Starts to initialize environment")
         llm_engine_generator = ChatModelLangchain(config_yaml_path=llm_config_path)
-        self.llm_engine = llm_engine_generator.generate_llm_model('Azure', model_selected)
+        self.llm_engine = llm_engine_generator.generate_llm_model('Zhipu', model_selected)
         self.paper_retriever = PaperRetriever(storage_path)
         logger.info(f'Paper retriever storage base path set to : {storage_path}')
         self.paper_parser = PaperParser(self.llm_engine, target_language)

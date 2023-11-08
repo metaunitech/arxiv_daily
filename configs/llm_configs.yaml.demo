@@ -49,4 +49,6 @@ Azure:
     api-key: *****
     endpoint: https://**********.openai.azure.com/
 
-
+Zhipu:
+  account:
+    api-key: ******
