@@ -1,0 +1,21 @@
+LLM:
+  llm_config_path: ****
+  model_selected: gpt-35-turbo-16k
+
+Storage:
+  storage_path_base: ./storage
+
+
+Arxiv:
+  queries:
+    LLM:
+      diy_query_str: ti:LLM OR ti:Agent OR ti:agent OR ti:llm OR ti:GPT OR ti:gpt OR ti:chat
+    NLP:
+      diy_query_str: cat:cs.CL
+#      target_primary_category: cs.CL
+
+Flow:
+  time_interval: DAILY
+  query_args_option: LLM
+  target_language: Chinese
+
