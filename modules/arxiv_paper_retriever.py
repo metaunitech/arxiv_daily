@@ -220,6 +220,7 @@ if __name__ == "__main__":
     # for i in res:
     #     print(i)
     # print(res)
-    instance.main(diy_query_str='all:LLM OR all:Agent OR all:agent OR all:llm OR all:GPT OR all:gpt OR all:chat',
-                  # target_primary_category=['cs'],
-                  publish_time_range=[yesterday_start, today_start])
+    instance.main(diy_query_str='abs:%22Cognitive+Architecture%22 OR all:%22cognitive+architecture%22 OR ti:cognitive OR abs:cognitive',
+                  target_primary_category=['cs'],
+                  # publish_time_range=[yesterday_start, today_start],
+                  )

@@ -45,7 +45,10 @@ This is the title, author, link, abstract and introduction of an English documen
         - (4):xxx.\n\n
         Be sure to use {self.__default_language} answers (proper nouns need to be marked in English), statements as concise and academic as possible, do not have too much repetitive information, numerical values using the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed.
 """
-        res = self.__llm_engine.predict(prompt)
+        try:
+            res = self.__llm_engine.predict(prompt)
+        except:
+            res = ""
         return res
 
     def _step2_summarize_method(self, paper_instance: Paper, field=None, chat_summary_text=None):
@@ -78,9 +81,11 @@ This is the <summary> and <Method> part of an English document, where <summary> 
                     ....... \n\n     
                  
                  Be sure to use {self.__default_language} answers (proper nouns need to be marked in English), statements as concise and academic as possible, do not repeat the content of the previous <summary>, the value of the use of the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed, ....... means fill in according to the actual requirements, if not, you can not write.                 
-                 Be sure to keep total length of output less than {self.__llm_engine.max_tokens}
                  """
-            chat_method_text = self.__llm_engine.predict(prompt)
+            try:
+                chat_method_text = self.__llm_engine.predict(prompt)
+            except:
+                chat_method_text = ''
         return chat_method_text
 
     def _step3_summarize_and_score_whole_paper(self, paper_instance: Paper, field=None, chat_summary_text=None,
@@ -120,7 +125,10 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
                  
                  Be sure to use {self.__default_language} answers (proper nouns need to be marked in English), statements as concise and academic as possible, do not repeat the content of the previous <summary>, the value of the use of the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed, ....... means fill in according to the actual requirements, if not, you can not write.                 
                  """
-        chat_conclusion_text = self.__llm_engine.predict(prompt)
+        try:
+            chat_conclusion_text = self.__llm_engine.predict(prompt)
+        except:
+            chat_conclusion_text = ""
         return chat_conclusion_text
 
     def bulk_translation_to_chinese(self, content):

@@ -266,7 +266,7 @@ class Paper:
 
 
 def main():
-    path = r'J:\Arxiv\paper_raw\A Definition of Open-Ended Learning Problems for Goal-Conditioned Agents.pdf'
+    path = r'J:\Arxiv\paper_raw\Responsible Emergent Multi-Agent Behavior.pdf'
     paper = Paper(path=path)
     paper.parse_pdf()
     paper.get_chapter_names()
