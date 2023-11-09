@@ -1,7 +1,7 @@
 from .models import Paper
 from .models import XmindNodeList
 from langchain.output_parsers import PydanticOutputParser
-
+from tenacity import retry, stop_after_attempt
 from loguru import logger
 import xmind
 from xmind.core.markerref import MarkerId
@@ -162,6 +162,7 @@ Output:
         logger.success(f"Total report: {report_content}")
         return report_content
 
+    @retry(stop=stop_after_attempt(3))
     def generate_xmind_node_from_summary(self, summary: str) -> XmindNodeList:
         parser = PydanticOutputParser(pydantic_object=XmindNodeList)
 

@@ -8,10 +8,14 @@ import pytz
 from loguru import logger
 from pathlib import Path
 
+
 class TIMEINTERVAL(Enum):
+    NONE = -1
     DAILY = 0
     WEEKLY = 1
     MONTHLY = 2
+    QUARTERLY = 3
+    YEARLY = 4
 
 
 current_datetime = datetime.now()
@@ -21,6 +25,8 @@ timezone = pytz.timezone('Asia/Shanghai')  # 用您所在时区替换'Your_Timez
 yesterday = current_datetime - timedelta(days=1)
 week_ago = current_datetime - timedelta(days=7)
 month_ago = current_datetime - relativedelta(months=1)
+quarter_ago = current_datetime - relativedelta(months=3)
+year_ago = current_datetime - relativedelta(years=1)
 # 获取今天的0点时间
 today_start = timezone.localize(
     datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
@@ -40,6 +46,16 @@ TIMEINTERVAL.MONTHLY.startTS = timezone.localize(
     datetime(month_ago.year, month_ago.month, month_ago.day, 0, 0, 0))
 TIMEINTERVAL.MONTHLY.endTS = timezone.localize(
     datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
+# QUARTERLY
+TIMEINTERVAL.QUARTERLY.startTS = timezone.localize(
+    datetime(quarter_ago.year, quarter_ago.month, quarter_ago.day, 0, 0, 0))
+TIMEINTERVAL.QUARTERLY.endTS = timezone.localize(
+    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
+# YEARLY
+TIMEINTERVAL.YEARLY.startTS = timezone.localize(
+    datetime(year_ago.year, year_ago.month, year_ago.day, 0, 0, 0))
+TIMEINTERVAL.YEARLY.endTS = timezone.localize(
+    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
 
 
 class MainFlow:
@@ -54,13 +70,15 @@ class MainFlow:
         _time_interval_str = CONFIG_DATA.get("Flow", {}).get("time_interval")
         assert _time_interval_str in TIMEINTERVAL.__dict__, (f"time_interval: {_time_interval_str} in config is not "
                                                              f"supported.")
-        default_publish_time_range = TIMEINTERVAL[_time_interval_str]
+        default_publish_time_range = TIMEINTERVAL[_time_interval_str] if _time_interval_str != "NONE" else None
         _query_args_option = CONFIG_DATA.get("Flow", {}).get("query_args_option")
         assert _query_args_option in CONFIG_DATA.get("Arxiv", {}).get("queries",
                                                                       {}), f'Query option: {_query_args_option} is not supported. Please add it in config file.'
 
         self.default_query_args = CONFIG_DATA.get("Arxiv", {}).get("queries", {})[_query_args_option]
-        self.default_query_args.update({"publish_time_range": [default_publish_time_range.startTS, default_publish_time_range.endTS]})
+        if default_publish_time_range:
+            self.default_query_args.update(
+                {"publish_time_range": [default_publish_time_range.startTS, default_publish_time_range.endTS]})
         self.default_query_args.update({'field': _query_args_option})
         target_language = CONFIG_DATA.get("Flow", {}).get("target_language")
         self.initialize_environment(llm_config_path=llm_config_path,
