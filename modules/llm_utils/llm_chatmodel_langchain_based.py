@@ -45,7 +45,8 @@ class ChatModelLangchain:
         elif platform == 'Zhipu':
             logger.debug(f"Model info: {__target_model_configs}")
             logger.debug(f"Model extra params: {kwargs}")
-            chat_model = ChatglmWrapperLangchain()
+            chat_model = ChatglmWrapperLangchain(api_key=__account_info.get("api-key"),
+                                                 model_name=model)
         else:
             logger.error(f"Platform {platform} is not implemented.")
 
