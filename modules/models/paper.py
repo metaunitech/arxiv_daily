@@ -1,6 +1,7 @@
 import fitz, io, os
 from PIL import Image
 from loguru import logger
+import re
 
 
 class Paper:
@@ -34,7 +35,8 @@ class Paper:
         self.section_text_dict = self._get_all_page()  # 段落与内容的对应字典
         self.section_text_dict.update({"title": self.title})
         self.section_text_dict.update({"paper_info": self.get_paper_info()})
-        self.pdf.close()
+        self.reference_list = self.get_reference()
+        # self.pdf.close()
 
     def get_paper_info(self):
         first_page_text = self.pdf[self.title_page].get_text()
@@ -116,12 +118,12 @@ class Paper:
                 space_split_list = line.split(' ')
                 if 1 < len(space_split_list) < 5:
                     if 1 < len(point_split_list) < 5 and (
-                            point_split_list[0]+'\n' in self.roman_num or point_split_list[0]+'\n' in self.digit_num):
+                            point_split_list[0] + '\n' in self.roman_num or point_split_list[0] + '\n' in self.digit_num):
                         logger.debug(f"line: {line}")
                         chapter_names.append(line)
                         # 这段代码可能会有新的bug，本意是为了消除"Introduction"的问题的！
                     elif 1 < len(point_split_list) < 5:
-                        logger.debug("line:", line)
+                        logger.debug(f"line: {line}")
                         chapter_names.append(line)
 
         return chapter_names
@@ -168,6 +170,51 @@ class Paper:
                                 self.title_page = page_index
         title = cur_title.replace('\n', ' ')
         return title
+
+    @staticmethod
+    def extract_citation_info(text):
+        # 正则表达式提取引用
+        citation_pattern = re.compile(
+            r'\[([\s\S]+?)\]\s([\s\S]+?)(?:\s+In\s([\s\S]+?))?(?:\s[Aa]rXiv,\s([\s\S]+?),\s(\d{4}))?\.')
+
+        matches = citation_pattern.findall(text)
+
+        # 提取标题、作者和Arxiv号
+        citations = []
+        for match in matches:
+            authors = match[0].split(', ')
+            title = match[1]
+            source = match[2] if match[2] else None
+            arxiv_number = match[3] if match[3] else None
+            year = match[4] if match[4] else None
+
+            citation_info = {
+                'authors': authors,
+                'title': title,
+                'source': source,
+                'arxiv_number': arxiv_number,
+                'year': year
+            }
+
+            citations.append(citation_info)
+
+        return citations
+
+    @staticmethod
+    def extract_arxiv_paper(text):
+        pass
+    
+
+    def get_reference(self):
+        reference_page_idx = self.section_page_dict.get('References')
+        if reference_page_idx is None:
+            logger.error("Cannot find references.")
+            return []
+        logger.debug(f"Reference page range: {reference_page_idx}-{self.pdf.page_count}")
+        reference_pages_raw = ''
+        for i in range(reference_page_idx, self.pdf.page_count):
+            reference_pages_raw += self.pdf[i].get_text()
+        print("HERE")
 
     def _get_all_page_index(self):
         # 定义需要寻找的章节名称列表
@@ -266,7 +313,7 @@ class Paper:
 
 
 def main():
-    path = r'J:\Arxiv\paper_raw\Responsible Emergent Multi-Agent Behavior.pdf'
+    path = r'W:\paper\LLM\Augmenting Language Models with Long-Term Memory.pdf'
     paper = Paper(path=path)
     paper.parse_pdf()
     paper.get_chapter_names()
