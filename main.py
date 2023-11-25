@@ -97,7 +97,7 @@ class MainFlow:
         logger.success("Environment initialized.")
 
     def default_routine(self):
-        # Step 1: Retrieve default query reports.
+        # Step 1: Retrieve de-fault query reports.
         logger.debug(self.default_query_args)
         download_history_path = self.paper_retriever(**self.default_query_args)
         # Step 2: Analyze

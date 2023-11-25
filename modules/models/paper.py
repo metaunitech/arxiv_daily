@@ -18,7 +18,7 @@ class Paper:
             self.parse_pdf()
         else:
             self.title = title
-        if not self.title:
+        if not self.title or len(self.title) >= 100:
             self.title = '.'.join(list(os.path.basename(path).split('.'))[:-1])
         self.authers = authers if authers else []
         self.roman_num = ["I", "II", 'III', "IV", "V", "VI", "VII", "VIII", "IIX", "IX", "X"]
@@ -116,7 +116,8 @@ class Paper:
                 space_split_list = line.split(' ')
                 if 1 < len(space_split_list) < 5:
                     if 1 < len(point_split_list) < 5 and (
-                            point_split_list[0]+'\n' in self.roman_num or point_split_list[0]+'\n' in self.digit_num):
+                            point_split_list[0] + '\n' in self.roman_num or point_split_list[
+                        0] + '\n' in self.digit_num):
                         logger.debug(f"line: {line}")
                         chapter_names.append(line)
                         # 这段代码可能会有新的bug，本意是为了消除"Introduction"的问题的！
