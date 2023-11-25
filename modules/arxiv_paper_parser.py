@@ -1,5 +1,5 @@
-from models import Paper
-from models import XmindNodeList
+from .models import Paper
+from .models import XmindNodeList
 from langchain.output_parsers import PydanticOutputParser
 from tenacity import retry, stop_after_attempt, wait_random
 from loguru import logger
@@ -137,7 +137,7 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
 Input:
 {content}
 Output:
-{{}}
+{{Your Result}}
 '''
         res = self.__llm_engine.predict(prompt)
         return res
@@ -214,7 +214,7 @@ Output:
 
         return result
 
-    def generate_paper_xmind(self, paper_instance: Paper, workbook=None, if_save_workbook=False, field=None):
+    def generate_paper_xmind(self, paper_instance: Paper, workbook=None, if_save_workbook=False, field=None, additional_node=None):
         xmind_name = paper_instance.title
         if not workbook:
             logger.warning(f"New xmind file path: {xmind_name}.xmind")
@@ -227,10 +227,18 @@ Output:
         root_topic = sheet.getRootTopic()
         root_topic.setTitle(xmind_name)  # 设置主题名称
 
+        if additional_node:
+            to_home_btn = root_topic.addSubTopic()
+            to_home_btn.setTitle("To home")
+            to_home_btn.setTopicHyperlink(additional_node.getID())
         if paper_instance.url:
             root_topic.setURLHyperlink(paper_instance.url)
         analysis_result = self.summarize_single_paper(paper_instance, field)
-        nodes = self.generate_xmind_node_from_summary(analysis_result)
+        try:
+            nodes = self.generate_xmind_node_from_summary(analysis_result)
+        except Exception as e:
+            logger.error(str(e))
+            nodes = []
 
         main_result = root_topic.addSubTopic()
         reformatted_summary = ""
@@ -240,18 +248,19 @@ Output:
 
         main_result.setTitle(reformatted_summary)
         main_result.addMarker(MarkerId.starRed)
-        for node in nodes.model_dump().get('NodeList', []):
-            node_name = node.get('node_name')
-            node_value_raw = node.get('node_value')
-            if not node_name or not node_value_raw:
-                continue
-            _subtitle = root_topic.addSubTopic()
-            _subtitle.setTitle(node_name)
-            _subtitle.setStyleID()
+        if nodes:
+            for node in nodes.model_dump().get('NodeList', []):
+                node_name = node.get('node_name')
+                node_value_raw = node.get('node_value')
+                if not node_name or not node_value_raw:
+                    continue
+                _subtitle = root_topic.addSubTopic()
+                _subtitle.setTitle(node_name)
+                _subtitle.setStyleID()
 
-            for node_value in node_value_raw.split('\n'):
-                _value_subtitle = _subtitle.addSubTopic()
-                _value_subtitle.setTitle(self.reformat_string(node_value))
+                for node_value in node_value_raw.split('\n'):
+                    _value_subtitle = _subtitle.addSubTopic()
+                    _value_subtitle.setTitle(self.reformat_string(node_value))
         if if_save_workbook:
             xmind.save(workbook=workbook)
         return sheet
