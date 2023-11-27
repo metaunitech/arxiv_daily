@@ -92,16 +92,17 @@ class PaperRetriever:
                 for ts in target_primary_category:
                     if ts not in _primary_subject:
                         return False
-            if _publish_time and publish_time_range and not (
-                    publish_time_range[0] < _publish_time < publish_time_range[1]):
-                logger.warning(f"Publish time not in range. {_publish_time}")
-                return False
+            # if _publish_time and publish_time_range and not (
+            #         publish_time_range[0] < _publish_time < publish_time_range[1]):
+            #     logger.warning(f"Publish time not in range. {_publish_time}")
+            #     return False
             return True
 
         if publish_time_range:
             sort_by = arxiv.SortCriterion.SubmittedDate
             search_instance = arxiv.Search(query=query_str, sort_by=sort_by)
-            return filter(should_pick, takewhile(within_time_range, search_instance.results()))
+            # return filter(should_pick, list(takewhile(within_time_range, search_instance.results())))
+            return takewhile(within_time_range, search_instance.results())
         else:
             search_instance = arxiv.Search(query=query_str)
             return filter(should_pick, search_instance.results())
@@ -160,14 +161,25 @@ class PaperRetriever:
         # 创建一个ThreadPoolExecutor，限制同时并发的线程数量为10
         max_workers = 2
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # 获取迭代器的结果并存储在列表中
-            task_list = list(self.retrieve_topic_w_regex(summary_regex, title_regex, journal_ref_regex,
-                                                         target_subject_category,
-                                                         target_primary_category, publish_time_range, diy_query_str,
-                                                         **kwargs))
+            task_gen = self.retrieve_topic_w_regex(summary_regex, title_regex, journal_ref_regex,
+                                                   target_subject_category,
+                                                   target_primary_category, publish_time_range, diy_query_str,
+                                                   **kwargs)
+            task_list = []
+            try:
+                for task in task_gen:
+                    logger.info(f'{task} imported')
+                    task_list.append(task)
+            except:
+                pass
+
+            # # 获取迭代器的结果并存储在列表中
+            # task_list = list(task_gen)
 
             # 获取总的任务数量
             total_tasks = len(task_list)
+
+            logger.success(f"TODO Task list total length: {total_tasks}")
 
             # 创建tqdm进度条
             progress_bar = tqdm(total=total_tasks, desc="Downloading", unit="file")

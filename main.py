@@ -105,9 +105,9 @@ class MainFlow:
         logger.debug(self.default_query_args)
         download_history_path = self.paper_retriever(**self.default_query_args)
         # Step 2: Analyze
-        workbook_path = self.paper_analyzer(download_history_path=download_history_path)
-        # Step 3: Generate report.
-        return workbook_path
+        # workbook_path = self.paper_analyzer(download_history_path=download_history_path)
+        # # Step 3: Generate report.
+        # return workbook_path
 
 
 if __name__ == "__main__":
