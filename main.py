@@ -1,4 +1,4 @@
-from modules import PaperParser, PaperRetriever, BulkAnalysis
+from modules import PaperParser, PaperRetriever, BulkAnalysis, RawDataStorage
 from configs import CONFIG_DATA
 from modules.llm_utils import ChatModelLangchain
 from enum import Enum
@@ -66,6 +66,8 @@ class MainFlow:
         model_selected = CONFIG_DATA.get("LLM", {}).get("model_selected")
         # Storage
         storage_path_base = Path(CONFIG_DATA.get("Storage", {}).get("storage_path_base"))
+        # DB related
+        db_config_path = Path(CONFIG_DATA.get("DB", {}).get("config_path"))
         # Flow related params:
         _time_interval_str = CONFIG_DATA.get("Flow", {}).get("time_interval")
         assert _time_interval_str in TIMEINTERVAL.__dict__, (f"time_interval: {_time_interval_str} in config is not "
@@ -82,17 +84,19 @@ class MainFlow:
         self.default_query_args.update({'field': _query_args_option})
         target_language = CONFIG_DATA.get("Flow", {}).get("target_language")
         self.initialize_environment(llm_config_path=llm_config_path,
+                                    db_config_path=db_config_path,
                                     model_selected=model_selected,
                                     target_language=target_language,
                                     storage_path=storage_path_base)
 
-    def initialize_environment(self, llm_config_path, model_selected, target_language, storage_path):
+    def initialize_environment(self, llm_config_path, db_config_path, model_selected, target_language, storage_path):
         logger.info("Starts to initialize environment")
         llm_engine_generator = ChatModelLangchain(config_yaml_path=llm_config_path)
         self.llm_engine = llm_engine_generator.generate_llm_model('Zhipu', model_selected)
-        self.paper_retriever = PaperRetriever(storage_path)
+        self.db_instance = RawDataStorage(db_config_path)
+        self.paper_retriever = PaperRetriever(db_instance=self.db_instance, storage_path=storage_path)
         logger.info(f'Paper retriever storage base path set to : {storage_path}')
-        self.paper_parser = PaperParser(self.llm_engine, target_language)
+        self.paper_parser = PaperParser(self.llm_engine, self.db_instance, target_language)
         self.paper_analyzer = BulkAnalysis(self.llm_engine, self.paper_parser)
         logger.success("Environment initialized.")
 

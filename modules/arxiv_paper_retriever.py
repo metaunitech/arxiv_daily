@@ -23,13 +23,14 @@ QUERY_ABBR_MAPPING = {'title': 'ti',
 
 
 class PaperRetriever:
-    def __init__(self, storage_path: str):
+    def __init__(self, db_instance, storage_path: str):
         self.__storage_path_base = Path(storage_path)
         os.makedirs(self.__storage_path_base, exist_ok=True)
         self.__log_path = self.__storage_path_base / 'logs' / str(datetime.now().strftime('%Y-%m-%d'))
         self.__raw_paper_storage_path = self.__storage_path_base / 'paper_raw'
         self.__raw_paper_storage_daily_path = (self.__storage_path_base / str(datetime.now().strftime('%Y-%m-%d')) /
                                                f'batch_{str(int(time.time()))}')
+        self.db_instance = db_instance
         os.makedirs(self.__raw_paper_storage_daily_path, exist_ok=True)
 
     @staticmethod
@@ -56,6 +57,14 @@ class PaperRetriever:
                         all_queries.append(f'{query_abbr}:{val}')
             query_str = " AND ".join(all_queries) if all_queries else 'all'
         logger.debug(query_str)
+
+        def within_time_range(x):
+            _publish_time = x.published
+            if _publish_time and publish_time_range and not (
+                    publish_time_range[0] < _publish_time < publish_time_range[1]):
+                logger.warning(f"Publish time not in range. {_publish_time}")
+                return False
+            return True
 
         def should_pick(x):
             """
@@ -92,7 +101,7 @@ class PaperRetriever:
         if publish_time_range:
             sort_by = arxiv.SortCriterion.SubmittedDate
             search_instance = arxiv.Search(query=query_str, sort_by=sort_by)
-            return takewhile(should_pick, search_instance.results())
+            return filter(should_pick, takewhile(within_time_range, search_instance.results()))
         else:
             search_instance = arxiv.Search(query=query_str)
             return filter(should_pick, search_instance.results())
@@ -116,6 +125,11 @@ class PaperRetriever:
         downloaded_path = result_instance.download_pdf(dirpath=str(self.__raw_paper_storage_path),
                                                        filename=downloaded_name + '.pdf')
         logger.success(f"Downloaded at {downloaded_path}")
+        self.db_instance.upload_paper_raw_data(entry_id=result_instance.entry_id,
+                                               title=result_instance.title,
+                                               summary=result_instance.summary,
+                                               primary_category=result_instance.primary_category,
+                                               publish_time=result_instance.published)
         return downloaded_path
 
     def main(self, summary_regex=None,

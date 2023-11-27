@@ -21,3 +21,4 @@ XMind~=1.2.0
 flask>=2.2.3
 PyMuPDF>=1.23.4
 zhipuai
+psycopg2_binary
