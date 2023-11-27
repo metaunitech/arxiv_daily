@@ -109,7 +109,7 @@ Output:
         papers = []
         for i in paper_data.keys():
             try:
-                papers.append(Paper(path=paper_data[i]['downloaded_pdf_path']))
+                papers.append(Paper(path=paper_data[i]['downloaded_pdf_path'], url=i))
             except Exception as e:
                 logger.error(f'paper: {i}')
                 logger.error(e)
