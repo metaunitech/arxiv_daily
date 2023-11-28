@@ -145,25 +145,44 @@ Output:
 
     def summarize_single_paper(self, paper_instance: Paper, field=None):
         logger.warning("Step 1: Get chat summary text with title/abs/intro")
-        chat_summary_text = self._step1_summarize_with_title_abs_intro(paper_instance, field)
+        chat_summary_text = self.__db_instance.get_step1_summary(paper_instance.url)
+        if not chat_summary_text:
+            chat_summary_text = self._step1_summarize_with_title_abs_intro(paper_instance, field)
+            self.__db_instance.upload_step1_brief_summary(paper_instance.url, chat_summary_text)
+        else:
+            logger.warning("Chat_summary_text already exist.")
         logger.success(f"Step 1 res: {chat_summary_text}")
-        self.__db_instance.upload_step1_brief_summary(paper_instance.url, chat_summary_text)
+
         logger.warning("Step 2: Get summary of Method")
-        chat_method_text = self._step2_summarize_method(paper_instance, field, chat_summary_text=chat_summary_text)
+        chat_method_text = self.__db_instance.get_step2_summary(paper_instance.url)
+        if not chat_method_text:
+            chat_method_text = self._step2_summarize_method(paper_instance, field, chat_summary_text=chat_summary_text)
+            self.__db_instance.upload_step2_method_summary(paper_instance.url, chat_method_text)
+        else:
+            logger.warning("Chat_method_text already exist.")
         logger.success(f"Step 2 res: {chat_method_text}")
-        self.__db_instance.upload_step2_method_summary(paper_instance.url, chat_method_text)
+
         logger.warning("Step 3: Get total summary")
-        chat_summary_total = self._step3_summarize_and_score_whole_paper(paper_instance, field,
-                                                                         chat_summary_text=chat_summary_text,
-                                                                         chat_method_text=chat_method_text)
+        chat_summary_total = self.__db_instance.get_step3_summary(paper_instance.url)
+        if not chat_summary_total:
+            chat_summary_total = self._step3_summarize_and_score_whole_paper(paper_instance, field,
+                                                                             chat_summary_text=chat_summary_text,
+                                                                             chat_method_text=chat_method_text)
+
+            self.__db_instance.upload_step3_whole_paper_summary(paper_instance.url, chat_summary_total)
+        else:
+            logger.warning("Chat_summary_total already exist.")
         logger.success(f"Step 3 res: {chat_summary_total}")
-        self.__db_instance.upload_step3_whole_paper_summary(paper_instance.url, chat_summary_total)
 
         report_content = '\n'.join([chat_summary_text, chat_method_text, chat_summary_total])
         if self.__default_language == "Chinese":
             logger.warning("Starts to Translate to Chinese.")
-            report_content = self.bulk_translation_to_chinese(report_content)
-            self.__db_instance.upload_whole_summary_chinese(paper_instance.url, report_content)
+            report_content = self.__db_instance.get_whole_summary_chinese(paper_instance.url)
+            if not report_content:
+                report_content = self.bulk_translation_to_chinese(report_content)
+                self.__db_instance.upload_whole_summary_chinese(paper_instance.url, report_content)
+            else:
+                logger.warning("Report_content already exist.")
         logger.success(f"Total report: {report_content}")
         return report_content
 

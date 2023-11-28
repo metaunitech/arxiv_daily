@@ -97,3 +97,33 @@ class RawDataStorage(SingletonDatabase):
                     "last_modified_at": func.now()
                 })
                 session.commit()
+
+    def get_step1_summary(self, entry_id):
+        with self.session as session:
+            result = session.query(PaperSummaryResults.step1_brief_summary).filter_by(entry_id=entry_id).scalar()
+            return result
+
+    def get_step2_summary(self, entry_id):
+        with self.session as session:
+            result = session.query(PaperSummaryResults.step2_method_summary).filter_by(entry_id=entry_id).scalar()
+            return result
+
+    def get_step3_summary(self, entry_id):
+        with self.session as session:
+            result = session.query(PaperSummaryResults.step3_whole_paper_summary).filter_by(entry_id=entry_id).scalar()
+            return result
+
+    def get_whole_summary_chinese(self, entry_id):
+        with self.session as session:
+            result = session.query(PaperSummaryResults.whole_summary_chinese).filter_by(entry_id=entry_id).scalar()
+            return result
+
+    def get_innovative_type(self, entry_id):
+        with self.session as session:
+            result = session.query(PaperSummaryResults.innovation_type).filter_by(entry_id=entry_id).scalar()
+            return result
+
+    def get_chinese_title(self, entry_id):
+        with self.session as session:
+            result = session.query(PaperSummaryResults.chinese_title).filter_by(entry_id=entry_id).scalar()
+            return result
