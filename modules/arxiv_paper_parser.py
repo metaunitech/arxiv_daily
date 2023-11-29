@@ -174,15 +174,17 @@ Output:
             logger.warning("Chat_summary_total already exist.")
         logger.success(f"Step 3 res: {chat_summary_total}")
 
-        report_content = '\n'.join([chat_summary_text, chat_method_text, chat_summary_total])
+        report_content_raw = '\n'.join([chat_summary_text, chat_method_text, chat_summary_total])
         if self.__default_language == "Chinese":
             logger.warning("Starts to Translate to Chinese.")
             report_content = self.__db_instance.get_whole_summary_chinese(paper_instance.url)
             if not report_content:
-                report_content = self.bulk_translation_to_chinese(report_content)
+                report_content = self.bulk_translation_to_chinese(report_content_raw)
                 self.__db_instance.upload_whole_summary_chinese(paper_instance.url, report_content)
             else:
                 logger.warning("Report_content already exist.")
+        else:
+            report_content = report_content_raw
         logger.success(f"Total report: {report_content}")
         return report_content
 
