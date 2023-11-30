@@ -101,8 +101,8 @@ class PaperRetriever:
         if publish_time_range:
             sort_by = arxiv.SortCriterion.SubmittedDate
             search_instance = arxiv.Search(query=query_str, sort_by=sort_by)
-            # return filter(should_pick, list(takewhile(within_time_range, search_instance.results())))
-            return takewhile(within_time_range, search_instance.results())
+            return filter(should_pick, takewhile(within_time_range, search_instance.results()))
+            # return takewhile(within_time_range, search_instance.results())
         else:
             search_instance = arxiv.Search(query=query_str)
             return filter(should_pick, search_instance.results())

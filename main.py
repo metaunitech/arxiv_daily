@@ -16,6 +16,7 @@ class TIMEINTERVAL(Enum):
     MONTHLY = 2
     QUARTERLY = 3
     YEARLY = 4
+    DUALDAYS = 5
 
 
 current_datetime = datetime.now()
@@ -27,6 +28,7 @@ week_ago = current_datetime - timedelta(days=7)
 month_ago = current_datetime - relativedelta(months=1)
 quarter_ago = current_datetime - relativedelta(months=3)
 year_ago = current_datetime - relativedelta(years=1)
+two_days_ago = current_datetime - relativedelta(days=2)
 # 获取今天的0点时间
 today_start = timezone.localize(
     datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
@@ -56,7 +58,11 @@ TIMEINTERVAL.YEARLY.startTS = timezone.localize(
     datetime(year_ago.year, year_ago.month, year_ago.day, 0, 0, 0))
 TIMEINTERVAL.YEARLY.endTS = timezone.localize(
     datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
-
+# DUAL DAYS
+TIMEINTERVAL.DUALDAYS.startTS = timezone.localize(
+    datetime(two_days_ago.year, two_days_ago.month, two_days_ago.day, 0, 0, 0))
+TIMEINTERVAL.DUALDAYS.endTS = timezone.localize(
+    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
 
 class MainFlow:
     def __init__(self):
