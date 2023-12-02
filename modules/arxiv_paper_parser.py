@@ -208,6 +208,7 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
         labels = parser.parse(res_content)
         logger.debug(labels)
         return labels
+
     @retry(wait=wait_random(min=1, max=3), stop=stop_after_attempt(3))
     def generate_paper_keypoints_from_summary(self, summary: str):
         parser = PydanticOutputParser(pydantic_object=PaperKeypoints)
@@ -259,7 +260,8 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
 
         return result
 
-    def generate_paper_xmind(self, paper_instance: Paper, workbook=None, if_save_workbook=False, field=None, additional_node=None):
+    def generate_paper_xmind(self, paper_instance: Paper, workbook=None, if_save_workbook=False, field=None,
+                             additional_node=None):
         xmind_name = paper_instance.title
         if not workbook:
             logger.warning(f"New xmind file path: {xmind_name}.xmind")
@@ -270,7 +272,8 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
             sheet.setTitle(xmind_name)
         # 获取画布的中心主题，默认创建画布时会新建一个空白中心主题
         root_topic = sheet.getRootTopic()
-        root_topic.setTitle(xmind_name)  # 设置主题名称
+        xmind_name_reformatted = self.reformat_string(xmind_name)
+        root_topic.setTitle(xmind_name_reformatted)  # 设置主题名称
 
         if additional_node:
             to_home_btn = root_topic.addSubTopic()
@@ -315,7 +318,6 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
         if if_save_workbook:
             xmind.save(workbook=workbook)
         return sheet, keypoints
-
 
 
 if __name__ == "__main__":

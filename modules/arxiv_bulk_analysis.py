@@ -31,6 +31,37 @@ class BulkAnalysis:
         # key = '+'.join([f'{i}_{document_instance.metadata[i]}' for i in document_instance.metadata.keys()])
         return key
 
+    @staticmethod
+    def reformat_string(string_input, row_max=35):
+        def is_chinese(char):
+            # 判断字符是否为中文
+            return '\u4e00' <= char <= '\u9fff'
+
+        # 初始化变量以跟踪当前行的字符数和行数
+        current_row = 0
+        current_line_length = 0
+
+        # 初始化结果字符串
+        result = ""
+
+        # 遍历输入字符串的每个字符
+        for char in string_input:
+            # 计算将字符添加到当前行后的行长度
+            new_line_length = current_line_length + (2 if is_chinese(char) else 1)  # 中文字符宽度为2，其他字符宽度为1
+
+            # 如果将字符添加到当前行不会超过行限制
+            if new_line_length <= row_max:
+                # 添加字符到当前行
+                result += char
+                current_line_length = new_line_length
+            else:
+                # 添加换行符，将字符添加到新行
+                result += "\n" + char
+                current_row += 1
+                current_line_length = (2 if is_chinese(char) else 1)
+
+        return result
+
     def bulk_translation_universal(self, content):
         prompt = f'''我会给你一段文字，请你帮我把他翻译成中文。注意：一些专有名词，学术名词等可以保留为英文。例如：NLP不用翻译为自然语言处理，直接用NLP即可。请直接返回你的翻译结果。\nInput:
 {content}
@@ -87,7 +118,8 @@ Output:
                     chinese_title = None
 
             title_str = f'{chinese_title}\n({paper.title})' if chinese_title else paper.title
-            paper_node.setTitle(title_str[:100])
+            title_str = self.reformat_string(title_str, 100)
+            paper_node.setTitle(title_str)
             paper_sheet, keypoints = self.__paper_parser.generate_paper_xmind(paper_instance=paper,
                                                                               workbook=workbook,
                                                                               field=field,
