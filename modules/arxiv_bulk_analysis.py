@@ -92,10 +92,11 @@ Output:
                                                                               workbook=workbook,
                                                                               field=field,
                                                                               additional_node=root_topic)
-            for keypoint in keypoints.model_dump().get('keypoints', []):
-                _subtitle = paper_node.addSubTopic()
-                _subtitle.setTitle(keypoint)
-                _subtitle.setStyleID()
+            if keypoints:
+                for keypoint in keypoints.model_dump().get('keypoints', []):
+                    _subtitle = paper_node.addSubTopic()
+                    _subtitle.setTitle(keypoint)
+                    _subtitle.setStyleID()
             paper_node.setTopicHyperlink(paper_sheet.getRootTopic().getID())
         xmind.save(workbook)
         return bulk_papers_xmind_path

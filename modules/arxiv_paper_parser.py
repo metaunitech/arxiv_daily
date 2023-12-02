@@ -225,7 +225,7 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
                                    format_instructions=parser.get_format_instructions()))
         logger.debug(res_content)
         keypoints = parser.parse(res_content)
-        logger.debug(labels)
+        logger.debug(keypoints)
         return keypoints
 
     @staticmethod
