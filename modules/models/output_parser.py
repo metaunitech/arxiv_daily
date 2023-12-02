@@ -7,7 +7,7 @@ from typing import List
 class XmindNode(BaseModel):
     node_name: str = Field(
         description='思维导图节点类型名称',
-        examples=['标题', '摘要', '创新点', '效果', '细分研究方向']
+        examples=['标题', '摘要', '创新点', '效果', '细分研究方向', '关键词']
     )
     node_value: str = Field(
         description='思维导图节点值'
@@ -17,6 +17,12 @@ class XmindNode(BaseModel):
 class XmindNodeList(BaseModel):
     NodeList: List[XmindNode] = Field(
         description='思维导图的节点列表'
+    )
+
+
+class PaperKeypoints(BaseModel):
+    keypoints: List[str] = Field(
+        description='论文关键词的列表'
     )
 
 

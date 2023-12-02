@@ -20,9 +20,10 @@ import xmind
 
 
 class BulkAnalysis:
-    def __init__(self, llm_engine, paper_parser_instance: PaperParser):
+    def __init__(self, llm_engine, db_instance, paper_parser_instance: PaperParser):
         self.llm_engine = llm_engine
         self.__paper_parser = paper_parser_instance
+        self.__db_instance = db_instance
 
     @staticmethod
     def get_key_of_document(document_instance: Document):
@@ -31,7 +32,7 @@ class BulkAnalysis:
         return key
 
     def bulk_translation_universal(self, content):
-        prompt = f'''我会给你一段文字，请你帮我把他翻译成中文。注意：一些专有名词，学术名词等可以保留为英文。例如：NLP不用翻译为自然语言处理，直接用NLP即可。请直接返回结果部分。\nInput:
+        prompt = f'''我会给你一段文字，请你帮我把他翻译成中文。注意：一些专有名词，学术名词等可以保留为英文。例如：NLP不用翻译为自然语言处理，直接用NLP即可。请直接返回你的翻译结果。\nInput:
 {content}
 Output:
 {{Your Result}}'''
@@ -77,16 +78,24 @@ Output:
         root_topic.setTitle(papers_description)
         for paper in papers:
             paper_node = root_topic.addSubTopic()
-            try:
-                chinese_title = self.bulk_translation_universal(paper.title)
-            except:
-                chinese_title = None
-            title_str = f'{chinese_title}({paper.title})' if chinese_title else paper.title
+            chinese_title = self.__db_instance.get_chinese_title(paper.url)
+            if not chinese_title:
+                try:
+                    chinese_title = self.bulk_translation_universal(paper.title)
+                    self.__db_instance.upload_chinese_title(paper.url, chinese_title)
+                except:
+                    chinese_title = None
+
+            title_str = f'{chinese_title}\n({paper.title})' if chinese_title else paper.title
             paper_node.setTitle(title_str[:100])
-            paper_sheet = self.__paper_parser.generate_paper_xmind(paper_instance=paper,
-                                                                   workbook=workbook,
-                                                                   field=field,
-                                                                   additional_node=root_topic)
+            paper_sheet, keypoints = self.__paper_parser.generate_paper_xmind(paper_instance=paper,
+                                                                              workbook=workbook,
+                                                                              field=field,
+                                                                              additional_node=root_topic)
+            for keypoint in keypoints.model_dump().get('keypoints', []):
+                _subtitle = paper_node.addSubTopic()
+                _subtitle.setTitle(keypoint)
+                _subtitle.setStyleID()
             paper_node.setTopicHyperlink(paper_sheet.getRootTopic().getID())
         xmind.save(workbook)
         return bulk_papers_xmind_path
@@ -115,7 +124,8 @@ Output:
                 logger.error(e)
                 continue
         paper_description_str = self.generate_paper_description(bulk_description_data)
-        logger.info(f"Try to analyze bulk paper with count {len(papers)}. \n[Bulk description]: \n{paper_description_str}")
+        logger.info(
+            f"Try to analyze bulk paper with count {len(papers)}. \n[Bulk description]: \n{paper_description_str}")
         batch_path = download_history_path.parent
         workbook_path = self.generate_paper_xmind(papers=papers,
                                                   papers_description=paper_description_str,

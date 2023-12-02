@@ -103,7 +103,7 @@ class MainFlow:
         self.paper_retriever = PaperRetriever(db_instance=self.db_instance, storage_path=storage_path)
         logger.info(f'Paper retriever storage base path set to : {storage_path}')
         self.paper_parser = PaperParser(self.llm_engine, self.db_instance, target_language)
-        self.paper_analyzer = BulkAnalysis(self.llm_engine, self.paper_parser)
+        self.paper_analyzer = BulkAnalysis(self.llm_engine, self.db_instance, self.paper_parser)
         logger.success("Environment initialized.")
 
     def default_routine(self):

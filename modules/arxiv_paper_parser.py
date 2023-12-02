@@ -1,5 +1,5 @@
 from .models import Paper
-from .models import XmindNodeList
+from .models import XmindNodeList, PaperKeypoints
 from langchain.output_parsers import PydanticOutputParser
 from tenacity import retry, stop_after_attempt, wait_random
 from loguru import logger
@@ -44,7 +44,7 @@ This is the title, author, link, abstract and introduction of an English documen
         - (2):xxx;\n 
         - (3):xxx;\n 
         - (4):xxx.\n\n
-        Be sure to use {self.__default_language} answers (proper nouns need to be marked in English), statements as concise and academic as possible, do not have too much repetitive information, numerical values using the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed.
+        Statements as concise and academic as possible, do not have too much repetitive information, numerical values using the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed.
 """
         try:
             res = self.__llm_engine.predict(prompt)
@@ -81,7 +81,7 @@ This is the <summary> and <Method> part of an English document, where <summary> 
                     - (3):xxx;\n  
                     ....... \n\n     
                  
-                 Be sure to use {self.__default_language} answers (proper nouns need to be marked in English), statements as concise and academic as possible, do not repeat the content of the previous <summary>, the value of the use of the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed, ....... means fill in according to the actual requirements, if not, you can not write.                 
+                 Statements as concise and academic as possible, do not repeat the content of the previous <summary>, the value of the use of the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed, ....... means fill in according to the actual requirements, if not, you can not write.                 
                  """
             try:
                 chat_method_text = self.__llm_engine.predict(prompt)
@@ -124,7 +124,7 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
                     - (1):xxx;\n                     
                     - (2):Innovation point: xxx; Performance: xxx; Workload: xxx;\n                      
                  
-                 Be sure to use {self.__default_language} answers (proper nouns need to be marked in English), statements as concise and academic as possible, do not repeat the content of the previous <summary>, the value of the use of the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed, ....... means fill in according to the actual requirements, if not, you can not write.                 
+                Statements as concise and academic as possible, do not repeat the content of the previous <summary>, the value of the use of the original numbers, be sure to strictly follow the format, the corresponding content output to xxx, in accordance with \n line feed, ....... means fill in according to the actual requirements, if not, you can not write.                 
                  """
         try:
             chat_conclusion_text = self.__llm_engine.predict(prompt)
@@ -133,11 +133,11 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
         return chat_conclusion_text
 
     def bulk_translation_to_chinese(self, content):
-        prompt = f'''我会提供你一个对于论文的总结，是英文的，我需要你帮我把他翻译成中文。注意：一些专有名词，学术名词等可以保留为英文。例如：NLP不用翻译为自然语言处理，直接用NLP即可。论文的标题中文英文都要包含，格式: <中文标题>（<英文标题>）
+        prompt = f'''我会提供你一个对于论文的总结，是英文的，我需要你帮我把他翻译成中文。注意：一些专有名词，学术名词等可以保留为英文。例如：NLP不用翻译为自然语言处理，直接用NLP即可。论文的标题中文英文都要包含，格式: <中文标题>（<英文标题>）。请直接返回你的翻译即可。
 
-Input:
+输入:
 {content}
-Output:
+输出:
 {{Your Result}}
 '''
         res = self.__llm_engine.predict(prompt)
@@ -208,6 +208,25 @@ Output:
         labels = parser.parse(res_content)
         logger.debug(labels)
         return labels
+    @retry(wait=wait_random(min=1, max=3), stop=stop_after_attempt(3))
+    def generate_paper_keypoints_from_summary(self, summary: str):
+        parser = PydanticOutputParser(pydantic_object=PaperKeypoints)
+
+        prompt = """你是一个阅读过很多论文的学者。我需要你帮我根据对于论文的总结生成该论文的关键词。关键词可以是论文的核心，论文用到的方法，论文的领域等等。以JSON的格式返回给我。{format_instructions}
+                Input:
+                {summary}
+                Output:
+                <Your answer>"""
+        logger.debug("try to generate key-points")
+        res_content = self.__llm_engine.predict(
+            prompt.format(summary=summary,
+                          format_instructions=parser.get_format_instructions()))
+        logger.debug(prompt.format(summary=summary,
+                                   format_instructions=parser.get_format_instructions()))
+        logger.debug(res_content)
+        keypoints = parser.parse(res_content)
+        logger.debug(labels)
+        return keypoints
 
     @staticmethod
     def reformat_string(string_input, row_max=35):
@@ -266,6 +285,12 @@ Output:
             logger.error(str(e))
             nodes = []
 
+        try:
+            keypoints = self.generate_paper_keypoints_from_summary(analysis_result)
+        except Exception as e:
+            logger.error(str(e))
+            keypoints = []
+
         main_result = root_topic.addSubTopic()
         reformatted_summary = ""
         for line in analysis_result.split('\n'):
@@ -289,7 +314,8 @@ Output:
                     _value_subtitle.setTitle(self.reformat_string(node_value))
         if if_save_workbook:
             xmind.save(workbook=workbook)
-        return sheet
+        return sheet, keypoints
+
 
 
 if __name__ == "__main__":
