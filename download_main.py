@@ -123,13 +123,14 @@ class MainFlow:
 
 
 if __name__ == "__main__":
+    logger.info("Starts")
     while 1:
         current_datetime = datetime.now()
-        time_delta = current_datetime - datetime(current_datetime.year, current_datetime.month, current_datetime.day, 0,
+        time_delta = current_datetime - datetime(current_datetime.year, current_datetime.month, current_datetime.day, 1,
                                                  0, 0)
-        if 2 > time_delta.seconds > 0:
+        if 5 > time_delta.seconds > 0:
             logger.info(f"Current time: {current_datetime}")
             ins = MainFlow()
-            ins.default_query_args()
+            ins.default_routine()
 
 

@@ -37,9 +37,19 @@ def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
         reply = auto_instance.default_reply(data['content'])
         wework_instance.send_text(conversation_id=conversation_id,
                                   content=reply)
+    if sender_user_id == self_user_id:
+        if data['content'] == '发送':
+            reports = auto_instance.get_today_reports()
+            all_rooms = wework.get_rooms().get("room_list", [])
+            all_room_c_ids = [] if not all_rooms else [i['conversation_id'] for i in all_rooms]
+            for c_id in all_room_c_ids:
+                for k in reports:
+                    logger.info(f"Report send to {c_id}: {reports[k]}")
+                    wework.send_text(c_id, k)
+                    wework.send_file(c_id, reports[k])
 
 
-send_report_time = [17, 20, 0]
+send_report_time = [9, 0, 0]
 try:
     while True:
         current_datetime = datetime.now()
