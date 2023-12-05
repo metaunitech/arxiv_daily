@@ -65,7 +65,7 @@ TIMEINTERVAL.DUALDAYS.endTS = timezone.localize(
     datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
 
 
-class MainFlow:
+class ArxivFlow:
     def __init__(self):
         logger.info("Validating and retrieving data from GLOBAL CONFIG")
         # LLM
@@ -130,7 +130,7 @@ if __name__ == "__main__":
                                                  0, 0)
         if 5 > time_delta.seconds > 0:
             logger.info(f"Current time: {current_datetime}")
-            ins = MainFlow()
+            ins = ArxivFlow()
             ins.default_routine()
 
 

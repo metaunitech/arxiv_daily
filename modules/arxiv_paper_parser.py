@@ -274,7 +274,6 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
         root_topic = sheet.getRootTopic()
         xmind_name_reformatted = self.reformat_string(xmind_name)
         root_topic.setTitle(xmind_name_reformatted)  # 设置主题名称
-
         if additional_node:
             to_home_btn = root_topic.addSubTopic()
             to_home_btn.setTitle("To home")

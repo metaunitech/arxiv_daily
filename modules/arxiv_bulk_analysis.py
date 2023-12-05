@@ -2,6 +2,7 @@ from typing import List
 from .models import Paper
 from langchain.schema import Document
 from .arxiv_paper_parser import PaperParser
+from modules.xmind_related import fix_xmind
 from langchain.prompts import PromptTemplate
 from functools import partial
 from langchain.schema.prompt_template import format_document
@@ -102,7 +103,7 @@ Output:
     #     # TODO:
 
     def generate_paper_xmind(self, papers: List[Paper], papers_description: str, batch_path: Path, field=None):
-        bulk_papers_xmind_path = batch_path / f'bulk_papers_xmind_{str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S"))}.xmind'
+        bulk_papers_xmind_path = batch_path / f'{field}领域论文总结_{str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S"))}.xmind'
         workbook = xmind.load(bulk_papers_xmind_path)
         main_sheet = workbook.getPrimarySheet()
         root_topic = main_sheet.getRootTopic()
@@ -131,6 +132,7 @@ Output:
                     _subtitle.setStyleID()
             paper_node.setTopicHyperlink(paper_sheet.getRootTopic().getID())
         xmind.save(workbook)
+        fix_xmind(workbook)
         return bulk_papers_xmind_path
 
     @staticmethod
