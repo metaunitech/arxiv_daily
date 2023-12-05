@@ -79,15 +79,15 @@ class ArxivFlow:
         _time_interval_str = CONFIG_DATA.get("Flow", {}).get("time_interval")
         assert _time_interval_str in TIMEINTERVAL.__dict__, (f"time_interval: {_time_interval_str} in config is not "
                                                              f"supported.")
-        default_publish_time_range = TIMEINTERVAL[_time_interval_str] if _time_interval_str != "NONE" else None
+        default_updated_time_range = TIMEINTERVAL[_time_interval_str] if _time_interval_str != "NONE" else None
         _query_args_option = CONFIG_DATA.get("Flow", {}).get("query_args_option")
         assert _query_args_option in CONFIG_DATA.get("Arxiv", {}).get("queries",
                                                                       {}), f'Query option: {_query_args_option} is not supported. Please add it in config file.'
 
         self.default_query_args = CONFIG_DATA.get("Arxiv", {}).get("queries", {})[_query_args_option]
-        if default_publish_time_range:
+        if default_updated_time_range:
             self.default_query_args.update(
-                {"publish_time_range": [default_publish_time_range.startTS, default_publish_time_range.endTS]})
+                {"updated_time_range": [default_updated_time_range.startTS, default_updated_time_range.endTS]})
         self.default_query_args.update({'field': _query_args_option})
         target_language = CONFIG_DATA.get("Flow", {}).get("target_language")
         self.initialize_environment(llm_config_path=llm_config_path,
@@ -124,13 +124,15 @@ class ArxivFlow:
 
 if __name__ == "__main__":
     logger.info("Starts")
-    while 1:
-        current_datetime = datetime.now()
-        time_delta = current_datetime - datetime(current_datetime.year, current_datetime.month, current_datetime.day, 1,
-                                                 0, 0)
-        if 5 > time_delta.seconds > 0:
-            logger.info(f"Current time: {current_datetime}")
-            ins = ArxivFlow()
-            ins.default_routine()
+    ins = ArxivFlow()
+    ins.default_routine()
+    # while 1:
+    #     current_datetime = datetime.now()
+    #     time_delta = current_datetime - datetime(current_datetime.year, current_datetime.month, current_datetime.day, 1,
+    #                                              0, 0)
+    #     if 5 > time_delta.seconds > 0:
+    #         logger.info(f"Current time: {current_datetime}")
+    #         ins = ArxivFlow()
+    #         ins.default_routine()
 
 

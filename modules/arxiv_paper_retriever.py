@@ -39,7 +39,7 @@ class PaperRetriever:
                                journal_ref_regex=None,
                                target_subject_category=None,
                                target_primary_category=None,
-                               publish_time_range=None,
+                               updated_time_range=None,
                                diy_query_str=None,
                                **kwargs):
         if diy_query_str:
@@ -59,10 +59,10 @@ class PaperRetriever:
         logger.debug(query_str)
 
         def within_time_range(x):
-            _publish_time = x.published
-            if _publish_time and publish_time_range and not (
-                    publish_time_range[0] < _publish_time < publish_time_range[1]):
-                logger.warning(f"Publish time not in range. {_publish_time}")
+            _updated_time = x.updated
+            if _updated_time and updated_time_range and not (
+                    updated_time_range[0] < _updated_time < updated_time_range[1]):
+                logger.warning(f"Publish time not in range. {_updated_time}")
                 return False
             return True
 
@@ -77,7 +77,6 @@ class PaperRetriever:
             _journal_reference = x.journal_ref
             _subject_category = "+".join(x.categories)
             _primary_subject = x.primary_category
-            _publish_time = x.published
             if summary_regex and not re.search(summary_regex, _summary):
                 return False
             if title_regex and not re.search(title_regex, _title):
@@ -92,15 +91,11 @@ class PaperRetriever:
                 for ts in target_primary_category:
                     if ts not in _primary_subject:
                         return False
-            # if _publish_time and publish_time_range and not (
-            #         publish_time_range[0] < _publish_time < publish_time_range[1]):
-            #     logger.warning(f"Publish time not in range. {_publish_time}")
-            #     return False
             return True
 
-        if publish_time_range:
-            sort_by = arxiv.SortCriterion.SubmittedDate
-            search_instance = arxiv.Search(query=query_str, sort_by=sort_by)
+        if updated_time_range:
+            sort_by = arxiv.SortCriterion.LastUpdatedDate
+            search_instance = arxiv.Search(query=query_str, sort_by=sort_by, sort_order=arxiv.SortOrder.Descending)
             return filter(should_pick, takewhile(within_time_range, search_instance.results()))
             # return takewhile(within_time_range, search_instance.results())
         else:
@@ -138,7 +133,7 @@ class PaperRetriever:
              journal_ref_regex=None,
              target_subject_category=None,
              target_primary_category=None,
-             publish_time_range=None,
+             updated_time_range=None,
              diy_query_str=None,
              bulk_description=None,
              field=None,
@@ -163,7 +158,7 @@ class PaperRetriever:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             task_gen = self.retrieve_topic_w_regex(summary_regex, title_regex, journal_ref_regex,
                                                    target_subject_category,
-                                                   target_primary_category, publish_time_range, diy_query_str,
+                                                   target_primary_category, updated_time_range, diy_query_str,
                                                    **kwargs)
             task_list = []
             try:
@@ -201,8 +196,8 @@ class PaperRetriever:
         task_description_dict.update(kwargs)
         task_description_dict.update({'field': field,
                                       'description': bulk_description,
-                                      'publish_time_range': [str(i) for i in
-                                                             publish_time_range] if publish_time_range else None})
+                                      'updated_time_range': [str(i) for i in
+                                                             updated_time_range] if updated_time_range else None})
         task_description_dict.update({'download_history': download_history_dict})
 
         logger.success(f'Retrieved {len(download_history_dict.keys())} entries.')
@@ -242,11 +237,11 @@ if __name__ == "__main__":
         datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
 
     # res = instance.retrieve_topic_w_regex(title="LLM", target_primary_category=['cs'],
-    #                                       publish_time_range=[yesterday_start, today_start])
+    #                                       updated_time_range=[yesterday_start, today_start])
     # for i in res:
     #     print(i)
     # print(res)
     instance.main(diy_query_str='all:Cognitive Architecture AND (abs:Agent OR abs:LLM)',
                   # target_primary_category=['cs'],
-                  # publish_time_range=[yesterday_start, today_start],
+                  # updated_time_range=[yesterday_start, today_start],
                   )

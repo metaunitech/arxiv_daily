@@ -132,7 +132,8 @@ Output:
                     _subtitle.setStyleID()
             paper_node.setTopicHyperlink(paper_sheet.getRootTopic().getID())
         xmind.save(workbook)
-        fix_xmind(workbook)
+        if bulk_papers_xmind_path.exists():
+            fix_xmind(str(bulk_papers_xmind_path.absolute()))
         return bulk_papers_xmind_path
 
     @staticmethod
