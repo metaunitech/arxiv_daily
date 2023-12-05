@@ -3,6 +3,8 @@ from langchain.chat_models import AzureChatOpenAI
 import yaml
 from loguru import logger
 from .llm_chatglm_requst_based import ChatglmWrapperLangchain
+from .llm_chatglm_langchain_llm_based import Zhipuai_LLM
+
 
 class ChatModelLangchain:
     def __init__(self, config_yaml_path=None):
@@ -45,8 +47,9 @@ class ChatModelLangchain:
         elif platform == 'Zhipu':
             logger.debug(f"Model info: {__target_model_configs}")
             logger.debug(f"Model extra params: {kwargs}")
-            chat_model = ChatglmWrapperLangchain(api_key=__account_info.get("api-key"),
-                                                 model_name=model)
+            # chat_model = ChatglmWrapperLangchain(api_key=__account_info.get("api-key"),
+            #                                      model_name=model)
+            chat_model = Zhipuai_LLM(model=model, zhipuai_api_key=__account_info.get("api-key"))
         else:
             logger.error(f"Platform {platform} is not implemented.")
 

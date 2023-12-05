@@ -1,21 +1,24 @@
+import traceback
 from typing import List
 from .models import Paper
 from langchain.schema import Document
 from .arxiv_paper_parser import PaperParser
 from modules.xmind_related import fix_xmind
 from langchain.prompts import PromptTemplate
-from functools import partial
-from langchain.schema.prompt_template import format_document
-# from langchain.schema import StrOutputParser
-# from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
-# from langchain.chains.combine_documents.stuff import StuffDocumentsChain
-# from langchain.chains.llm import LLMChain
+import arxiv
+from langchain.llms import LlamaCpp
+
+import time
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
+from langchain.chains.combine_documents.stuff import StuffDocumentsChain
+from langchain.chains.llm import LLMChain
 
 import json
 
 from loguru import logger
 from pathlib import Path
-from datetime import datetime
+import datetime
 
 import xmind
 
@@ -25,12 +28,6 @@ class BulkAnalysis:
         self.llm_engine = llm_engine
         self.__paper_parser = paper_parser_instance
         self.__db_instance = db_instance
-
-    @staticmethod
-    def get_key_of_document(document_instance: Document):
-        key = str(document_instance.metadata)
-        # key = '+'.join([f'{i}_{document_instance.metadata[i]}' for i in document_instance.metadata.keys()])
-        return key
 
     @staticmethod
     def reformat_string(string_input, row_max=35):
@@ -71,43 +68,74 @@ Output:
         res = self.llm_engine.predict(prompt)
         return res
 
-    def load_bulk_papers(self, papers: List[Paper], batch_path: Path, field=None):
+    def load_bulk_papers(self, papers: List[Paper], field=None):
         documents = []
-        unit_paper_summary_out = {}
         for paper in papers:
             paper_sum = self.__paper_parser.summarize_single_paper(paper_instance=paper, field=field)
             document_instance = Document(page_content=paper_sum, metadata={'title': paper.title, 'source': paper.url})
             documents.append(document_instance)
-            key = self.get_key_of_document(document_instance)
-            unit_paper_summary_out[key] = document_instance.page_content
-        bulk_papers_summaries_out_path = batch_path / f'bulk_papers_summaries_{str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S"))}.json'
-        with open(bulk_papers_summaries_out_path, 'w', encoding='utf-8') as f:
-            json.dump(unit_paper_summary_out, f, indent=4, ensure_ascii=False)
-        return bulk_papers_summaries_out_path
+        return documents
 
-    # def refine_analyze_bulk_paper(self, papers: List[Paper], field=None, bulk_paper_summary_json_path=None):
-    #     if bulk_paper_summary_json_path:
-    #         with open(bulk_paper_summary_json_path, 'r', encoding='utf-8') as f:
-    #             data = json.load(f)
-    #         logger.warning('Load previous data.')
-    #         docs = [Document(page_content=data[i], metadata=eval(i)) for i in data.keys()]
-    #     else:
-    #         docs = self.load_bulk_papers(papers, field=field)
-    #     document_prompt = PromptTemplate.from_template("{page_content}")
-    #     partial_format_document = partial(format_document, prompt=document_prompt)
-    #     # Map
-    #     map_template = """The following is a set of new research paper summaries
-    #         {docs}
-    #         Based on this list of docs, please generate combined review of all papers in bulletin points. Remember to keep the title of the paper.
-    #         Helpful Answer:"""
-    #     # TODO:
+    def refine_analyze_bulk_paper(self, papers: List[Paper], field=None):
+        docs = self.load_bulk_papers(papers, field=field)
+        # Map
+        map_template = """The following is a set of new research paper summaries
+            {docs}
+            Based on this list of docs, please generate combined review of all papers in bulletin points. Remember to keep the title of the paper.
+            Helpful Answer:"""
+        map_prompt = PromptTemplate.from_template(map_template)
+        map_chain = LLMChain(llm=self.llm_engine, prompt=map_prompt)
 
-    def generate_paper_xmind(self, papers: List[Paper], papers_description: str, batch_path: Path, field=None):
-        bulk_papers_xmind_path = batch_path / f'{field}领域论文总结_{str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S"))}.xmind'
+        reduce_template = """<s>[INST] The following is set of summaries from the transcript:
+            {doc_summaries}
+            ---
+            Based on the above transcript and distill it into a final, consolidated summary of the main points as accurate as possible and do not make up if you do not know.
+            Construct it as a well organized summary of the main points list them one by one.
+            Answer:  [/INST]"""
+
+        reduce_prompt = PromptTemplate.from_template(reduce_template)
+        reduce_chain = LLMChain(llm=self.llm_engine, prompt=reduce_prompt)
+        # Takes a list of documents, combines them into a single string, and passes this to an LLMChain
+        combine_documents_chain = StuffDocumentsChain(
+            llm_chain=reduce_chain, document_variable_name="doc_summaries"
+        )
+        reduce_documents_chain = ReduceDocumentsChain(
+            # This is final chain that is called.
+            combine_documents_chain=combine_documents_chain,
+            # If documents exceed context for `StuffDocumentsChain`
+            collapse_documents_chain=combine_documents_chain,
+            # The maximum number of tokens to group documents into.
+            token_max=32000,
+        )
+        map_reduce_chain = MapReduceDocumentsChain(
+            # Map chain
+            llm_chain=map_chain,
+            # Reduce chain
+            reduce_documents_chain=reduce_documents_chain,
+            # The variable name in the llm_chain to put the documents in
+            document_variable_name="docs",
+            # Return the results of the map steps in the output
+            return_intermediate_steps=True,
+        )
+
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=32000, chunk_overlap=60
+        )
+        split_docs = text_splitter.split_documents(docs)
+        logger.debug(split_docs)
+        start_time = time.time()
+        result = map_reduce_chain(split_docs, return_only_outputs=True)
+        print(f"Time taken: {time.time() - start_time} seconds")
+        return result['output_text']
+
+    def generate_paper_xmind(self, papers: List[Paper], papers_description: str, summary: str, batch_path: Path, field=None):
+        bulk_papers_xmind_path = batch_path / f'{field}领域论文总结_{str(datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S"))}.xmind'
         workbook = xmind.load(bulk_papers_xmind_path)
         main_sheet = workbook.getPrimarySheet()
         root_topic = main_sheet.getRootTopic()
         root_topic.setTitle(papers_description)
+        desc_node = root_topic.addSubTopic()
+        desc_node.setTitle(summary)
         for paper in papers:
             paper_node = root_topic.addSubTopic()
             chinese_title = self.__db_instance.get_chinese_title(paper.url)
@@ -154,23 +182,53 @@ Output:
         papers = []
         for i in paper_data.keys():
             try:
-                papers.append(Paper(path=paper_data[i]['downloaded_pdf_path'], url=i))
+                title = eval(paper_data[i]["info"]).get("title")
+                papers.append(Paper(path=paper_data[i]['downloaded_pdf_path'], url=i, title=title))
             except Exception as e:
                 logger.error(f'paper: {i}')
                 logger.error(e)
                 continue
+        try:
+            res = self.refine_analyze_bulk_paper(papers, bulk_description_data.get("field", None))
+            summary = self.bulk_translation_universal(res)
+        except Exception as e:
+            logger.warning(str(e))
+            logger.debug(traceback.format_exc())
+            summary = '暂无总结'
+        logger.success(f"SUMMARY: \n {summary}")
+        # bulk_description_data['description'] = summary
+
         paper_description_str = self.generate_paper_description(bulk_description_data)
         logger.info(
             f"Try to analyze bulk paper with count {len(papers)}. \n[Bulk description]: \n{paper_description_str}")
         batch_path = download_history_path.parent
         workbook_path = self.generate_paper_xmind(papers=papers,
                                                   papers_description=paper_description_str,
+                                                  summary=summary,
                                                   batch_path=batch_path,
                                                   field=bulk_description_data.get("field", None))
 
         return workbook_path
         # res = self.refine_analyze_bulk_paper(papers=papers, field="CS", bulk_paper_summary_json_path=summary_json)
         # logger.success(res)
+
+    def refine_main(self, download_history_path: Path):
+        with open(download_history_path, 'r') as f:
+            data = json.load(f)
+        paper_data = data.get('download_history', {})
+        bulk_description_data = {i: data[i] for i in data.keys() if i != 'download_history'}
+        papers = []
+        for i in paper_data.keys():
+            try:
+                title = eval(paper_data[i]["info"]).get("title")
+                papers.append(Paper(path=paper_data[i]['downloaded_pdf_path'], url=i, title=title))
+            except Exception as e:
+                logger.error(f'paper: {i}')
+                logger.error(e)
+                continue
+        res = self.refine_analyze_bulk_paper(papers, bulk_description_data.get("field", None))
+        translated_res = self.bulk_translation_universal(res)
+        return translated_res
 
     def __call__(self, *args, **kwargs):
         """
@@ -195,4 +253,4 @@ if __name__ == "__main__":
     llm_engine = llm_engine_generator.generate_llm_model('Azure', 'gpt-35-turbo-16k')
     ins = PaperParser(llm_engine=llm_engine, language='English')
     inst = BulkAnalysis(llm_engine=llm_engine, paper_parser_instance=ins, output_path=Path(__file__).parent)
-    inst.main(paper_all_json_path, summary_json=summary_json)
+    # inst.main(paper_all_json_path, summary_json=summary_json)

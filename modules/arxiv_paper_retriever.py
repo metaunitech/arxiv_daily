@@ -1,4 +1,5 @@
 import os
+import traceback
 from pathlib import Path
 from datetime import datetime, timedelta
 import arxiv
@@ -104,7 +105,7 @@ class PaperRetriever:
 
     @staticmethod
     def sanitize_filename(filename):
-        # 使用正则表达式替换不支持的字符为下划线
+        # 使用正则表达式替换不支持的字符为空格
         sanitized_filename = re.sub(r'[\/:*?"<>|]', ' ', filename)
         return sanitized_filename
 
@@ -152,6 +153,7 @@ class PaperRetriever:
                 # progress_bar.update(1)  # 更新进度条
             except Exception as e:
                 logger.error(f'Error in download_and_store: {e}')
+                logger.debug(traceback.format_exc())
 
         # 创建一个ThreadPoolExecutor，限制同时并发的线程数量为10
         max_workers = 2

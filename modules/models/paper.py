@@ -19,6 +19,7 @@ class Paper:
             self.parse_pdf()
         else:
             self.title = title
+            self.parse_pdf()
         if not self.title or len(self.title) >= 100:
             self.title = '.'.join(list(os.path.basename(path).split('.'))[:-1])
         self.authers = authers if authers else []

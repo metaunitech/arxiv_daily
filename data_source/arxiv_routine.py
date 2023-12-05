@@ -113,7 +113,6 @@ class ArxivFlow:
         download_history_path = self.paper_retriever(**self.default_query_args)
         # Step 2: Analyze
         workbook_path = self.paper_analyzer(download_history_path=download_history_path)
-        # Step 3: Generate report.
         return workbook_path
 
     def daily_routine(self):
