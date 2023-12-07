@@ -1,4 +1,5 @@
-from modules import PaperParser, PaperRetriever, BulkAnalysis, RawDataStorage
+from modules.data_source.arxiv import PaperParser, PaperRetriever, BulkAnalysis
+from modules import RawDataStorage
 from configs import CONFIG_DATA
 from modules.llm_utils import ChatModelLangchain
 from enum import Enum
@@ -81,14 +82,16 @@ class ArxivFlow:
                                                              f"supported.")
         default_updated_time_range = TIMEINTERVAL[_time_interval_str] if _time_interval_str != "NONE" else None
         _query_args_option = CONFIG_DATA.get("Flow", {}).get("query_args_option")
-        assert _query_args_option in CONFIG_DATA.get("Arxiv", {}).get("queries",
-                                                                      {}), f'Query option: {_query_args_option} is not supported. Please add it in config file.'
+        for option in _query_args_option:
+            assert option in CONFIG_DATA.get("Arxiv", {}).get("queries",
+                                                              {}), f'Query option: {_query_args_option} is not supported. Please add it in config file.'
 
-        self.default_query_args = CONFIG_DATA.get("Arxiv", {}).get("queries", {})[_query_args_option]
-        if default_updated_time_range:
-            self.default_query_args.update(
-                {"updated_time_range": [default_updated_time_range.startTS, default_updated_time_range.endTS]})
-        self.default_query_args.update({'field': _query_args_option})
+        self.default_query_args_list = [CONFIG_DATA.get("Arxiv", {}).get("queries", {})[i] for i in _query_args_option]
+        for args in self.default_query_args_list:
+            if default_updated_time_range:
+                args.update(
+                    {"updated_time_range": [default_updated_time_range.startTS, default_updated_time_range.endTS]})
+            args.update({'field': _query_args_option})
         target_language = CONFIG_DATA.get("Flow", {}).get("target_language")
         self.initialize_environment(llm_config_path=llm_config_path,
                                     db_config_path=db_config_path,
@@ -109,11 +112,12 @@ class ArxivFlow:
 
     def default_routine(self):
         # Step 1: Retrieve de-fault query reports.
-        logger.debug(self.default_query_args)
-        download_history_path = self.paper_retriever(**self.default_query_args)
-        # Step 2: Analyze
-        workbook_path = self.paper_analyzer(download_history_path=download_history_path)
-        return workbook_path
+        for args in self.default_query_args_list:
+            logger.debug(args)
+            download_history_path = self.paper_retriever(**args)
+            # Step 2: Analyze
+            workbook_path = self.paper_analyzer(download_history_path=download_history_path)
+            logger.success(f"{str(args)} downloaded to {workbook_path}")
 
     def daily_routine(self):
         all_queries = CONFIG_DATA.get('')
@@ -125,13 +129,11 @@ if __name__ == "__main__":
     logger.info("Starts")
     ins = ArxivFlow()
     ins.default_routine()
-    # while 1:
-    #     current_datetime = datetime.now()
-    #     time_delta = current_datetime - datetime(current_datetime.year, current_datetime.month, current_datetime.day, 1,
-    #                                              0, 0)
-    #     if 5 > time_delta.seconds > 0:
-    #         logger.info(f"Current time: {current_datetime}")
-    #         ins = ArxivFlow()
-    #         ins.default_routine()
-
-
+    while 1:
+        current_datetime = datetime.now()
+        time_delta = current_datetime - datetime(current_datetime.year, current_datetime.month, current_datetime.day, 1,
+                                                 0, 0)
+        if 5 > time_delta.seconds > 0:
+            logger.info(f"Current time: {current_datetime}")
+            ins = ArxivFlow()
+            ins.default_routine()
