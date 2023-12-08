@@ -33,7 +33,7 @@ def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
     conversation_id: str = data["conversation_id"]
 
     # 判断消息不是自己发的并且不是群消息时，回复对方
-    if sender_user_id != self_user_id:
+    if sender_user_id != self_user_id and self_user_id in [i.get("user_id") for i in data['at_list']]:
         reply = auto_instance.default_reply(data['content'])
         wework_instance.send_text(conversation_id=conversation_id,
                                   content=reply)

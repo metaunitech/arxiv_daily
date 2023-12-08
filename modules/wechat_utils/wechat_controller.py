@@ -30,7 +30,7 @@ class AutoReply:
     def default_reply(self, msg):
         todays_reports = self.get_today_reports()
         background_info = ""
-        todays_reports_str = f"""{str(datetime.now().strftime('%Y-%m-%d'))}生成的报告有如下：{str(todays_reports)}."""
+        todays_reports_str = f"""{str(datetime.now().strftime('%Y-%m-%d'))}生成的报告有如下：{str(todays_reports.keys())}."""
         background_info += todays_reports_str
         prompt = f"""你是metaunitech的客服，你需要回答客户的问题。我会给你一些背景知识，请适当参考背景知识。\n背景知识：{background_info}\n如果没有背景知识可以借鉴，请按照常识回答。客户的输入：{msg}"""
         res = self.llm_engine.predict(prompt)
