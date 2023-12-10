@@ -32,12 +32,7 @@ def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
     self_user_id = wework_instance.get_login_info()["user_id"]
     conversation_id: str = data["conversation_id"]
 
-    # 判断消息不是自己发的并且不是群消息时，回复对方
-    if sender_user_id != self_user_id and self_user_id in [i.get("user_id") for i in data['at_list']]:
-        reply = auto_instance.default_reply(data['content'])
-        wework_instance.send_room_at_msg(conversation_id=conversation_id,
-                                         content=reply,
-                                         at_list=[sender_user_id])
+
     # if sender_user_id == self_user_id:
     if sender_user_id == self_user_id and data['content'] == '发送日报':
         reports = auto_instance.get_date_reports()
@@ -49,7 +44,7 @@ def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
                 wework.send_text(c_id, k)
                 wework.send_file(c_id, reports[k])
 
-    if sender_user_id != self_user_id and data['content'] == '发送日报' and self_user_id in [i.get("user_id") for i in data['at_list']]:
+    elif sender_user_id != self_user_id and '发送日报' in data['content'] and self_user_id in [i.get("user_id") for i in data['at_list']]:
         reports = auto_instance.get_date_reports()
         if not reports:
             wework_instance.send_room_at_msg(conversation_id=conversation_id,
@@ -64,6 +59,13 @@ def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
             wework_instance.send_room_at_msg(conversation_id=conversation_id,
                                              content='日报已发送完毕。',
                                              at_list=[sender_user_id])
+
+    # 判断消息不是自己发的并且不是群消息时，回复对方
+    elif sender_user_id != self_user_id and self_user_id in [i.get("user_id") for i in data['at_list']]:
+        reply = auto_instance.default_reply(data['content'])
+        wework_instance.send_room_at_msg(conversation_id=conversation_id,
+                                         content=reply,
+                                         at_list=[sender_user_id])
 
 
 send_report_time = [9, 0, 0]

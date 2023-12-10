@@ -83,15 +83,17 @@ class ArxivFlow:
         default_updated_time_range = TIMEINTERVAL[_time_interval_str] if _time_interval_str != "NONE" else None
         _query_args_option = CONFIG_DATA.get("Flow", {}).get("query_args_option")
         for option in _query_args_option:
+            logger.debug(_query_args_option)
             assert option in CONFIG_DATA.get("Arxiv", {}).get("queries",
-                                                              {}), f'Query option: {_query_args_option} is not supported. Please add it in config file.'
+                                                              {}), f'Query option: {option} is not supported. Please add it in config file.'
 
         self.default_query_args_list = [CONFIG_DATA.get("Arxiv", {}).get("queries", {})[i] for i in _query_args_option]
-        for args in self.default_query_args_list:
+
+        for index, args in enumerate(self.default_query_args_list):
             if default_updated_time_range:
                 args.update(
                     {"updated_time_range": [default_updated_time_range.startTS, default_updated_time_range.endTS]})
-            args.update({'field': _query_args_option})
+            args.update({'field': _query_args_option[index]})
         target_language = CONFIG_DATA.get("Flow", {}).get("target_language")
         self.initialize_environment(llm_config_path=llm_config_path,
                                     db_config_path=db_config_path,
@@ -129,6 +131,7 @@ if __name__ == "__main__":
     logger.info("Starts")
     ins = ArxivFlow()
     ins.default_routine()
+
     while 1:
         current_datetime = datetime.now()
         time_delta = current_datetime - datetime(current_datetime.year, current_datetime.month, current_datetime.day, 1,
@@ -137,4 +140,3 @@ if __name__ == "__main__":
             logger.info(f"Current time: {current_datetime}")
             ins = ArxivFlow()
             ins.default_routine()
-

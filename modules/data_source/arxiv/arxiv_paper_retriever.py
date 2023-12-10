@@ -29,10 +29,8 @@ class PaperRetriever:
         os.makedirs(self.__storage_path_base, exist_ok=True)
         self.__log_path = self.__storage_path_base / 'logs' / str(datetime.now().strftime('%Y-%m-%d'))
         self.__raw_paper_storage_path = self.__storage_path_base / 'paper_raw'
-        self.__raw_paper_storage_daily_path = (self.__storage_path_base / str(datetime.now().strftime('%Y-%m-%d')) /
-                                               f'batch_{str(int(time.time()))}')
+
         self.db_instance = db_instance
-        os.makedirs(self.__raw_paper_storage_daily_path, exist_ok=True)
 
     @staticmethod
     def retrieve_topic_w_regex(summary_regex=None,
@@ -282,6 +280,10 @@ class PaperRetriever:
         :param kwargs:
         :return:
         """
+        self.__raw_paper_storage_daily_path = (self.__storage_path_base / str(datetime.now().strftime('%Y-%m-%d')) /
+                                               f'batch_{str(int(time.time()))}')
+        os.makedirs(self.__raw_paper_storage_daily_path, exist_ok=True)
+
         return self.main(*args, **kwargs)
 
 
