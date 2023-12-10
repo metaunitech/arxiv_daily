@@ -1,69 +1,16 @@
+import time
+
 from modules.data_source.arxiv import PaperParser, PaperRetriever, BulkAnalysis
 from modules import RawDataStorage
 from configs import CONFIG_DATA
 from modules.llm_utils import ChatModelLangchain
-from enum import Enum
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-import pytz
+# from enum import Enum
+from datetime import datetime
+# from dateutil.relativedelta import relativedelta
+# import pytz
 from loguru import logger
 from pathlib import Path
-
-
-class TIMEINTERVAL(Enum):
-    NONE = -1
-    DAILY = 0
-    WEEKLY = 1
-    MONTHLY = 2
-    QUARTERLY = 3
-    YEARLY = 4
-    DUALDAYS = 5
-
-
-current_datetime = datetime.now()
-
-timezone = pytz.timezone('Asia/Shanghai')  # 用您所在时区替换'Your_Timezone'
-
-yesterday = current_datetime - timedelta(days=1)
-week_ago = current_datetime - timedelta(days=7)
-month_ago = current_datetime - relativedelta(months=1)
-quarter_ago = current_datetime - relativedelta(months=3)
-year_ago = current_datetime - relativedelta(years=1)
-two_days_ago = current_datetime - relativedelta(days=2)
-# 获取今天的0点时间
-today_start = timezone.localize(
-    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 0, 0, 0))
-
-# DAILY
-TIMEINTERVAL.DAILY.startTS = timezone.localize(
-    datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0))
-TIMEINTERVAL.DAILY.endTS = timezone.localize(
-    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
-# WEEKLY
-TIMEINTERVAL.WEEKLY.startTS = timezone.localize(
-    datetime(week_ago.year, week_ago.month, week_ago.day, 0, 0, 0))
-TIMEINTERVAL.WEEKLY.endTS = timezone.localize(
-    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
-# MONTHLY
-TIMEINTERVAL.MONTHLY.startTS = timezone.localize(
-    datetime(month_ago.year, month_ago.month, month_ago.day, 0, 0, 0))
-TIMEINTERVAL.MONTHLY.endTS = timezone.localize(
-    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
-# QUARTERLY
-TIMEINTERVAL.QUARTERLY.startTS = timezone.localize(
-    datetime(quarter_ago.year, quarter_ago.month, quarter_ago.day, 0, 0, 0))
-TIMEINTERVAL.QUARTERLY.endTS = timezone.localize(
-    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
-# YEARLY
-TIMEINTERVAL.YEARLY.startTS = timezone.localize(
-    datetime(year_ago.year, year_ago.month, year_ago.day, 0, 0, 0))
-TIMEINTERVAL.YEARLY.endTS = timezone.localize(
-    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
-# DUAL DAYS
-TIMEINTERVAL.DUALDAYS.startTS = timezone.localize(
-    datetime(two_days_ago.year, two_days_ago.month, two_days_ago.day, 0, 0, 0))
-TIMEINTERVAL.DUALDAYS.endTS = timezone.localize(
-    datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
+from modules.models.duration_utils import TIMEINTERVAL, get_time_interval, update_time_interval
 
 
 class ArxivFlow:
@@ -77,29 +24,32 @@ class ArxivFlow:
         # DB related
         db_config_path = Path(CONFIG_DATA.get("DB", {}).get("config_path"))
         # Flow related params:
-        _time_interval_str = CONFIG_DATA.get("Flow", {}).get("time_interval")
-        assert _time_interval_str in TIMEINTERVAL.__dict__, (f"time_interval: {_time_interval_str} in config is not "
-                                                             f"supported.")
-        default_updated_time_range = TIMEINTERVAL[_time_interval_str] if _time_interval_str != "NONE" else None
-        _query_args_option = CONFIG_DATA.get("Flow", {}).get("query_args_option")
-        for option in _query_args_option:
-            logger.debug(_query_args_option)
-            assert option in CONFIG_DATA.get("Arxiv", {}).get("queries",
-                                                              {}), f'Query option: {option} is not supported. Please add it in config file.'
-
-        self.default_query_args_list = [CONFIG_DATA.get("Arxiv", {}).get("queries", {})[i] for i in _query_args_option]
-
-        for index, args in enumerate(self.default_query_args_list):
-            if default_updated_time_range:
-                args.update(
-                    {"updated_time_range": [default_updated_time_range.startTS, default_updated_time_range.endTS]})
-            args.update({'field': _query_args_option[index]})
         target_language = CONFIG_DATA.get("Flow", {}).get("target_language")
         self.initialize_environment(llm_config_path=llm_config_path,
                                     db_config_path=db_config_path,
                                     model_selected=model_selected,
                                     target_language=target_language,
                                     storage_path=storage_path_base)
+
+    @staticmethod
+    def assemble_query_args(startTS: datetime, endTS: datetime, query_arg_option=None, queries=None):
+        if queries:
+            query_args = queries
+        elif query_arg_option:
+            query_args = CONFIG_DATA.get("Arxiv", {}).get("queries", {}).get(query_arg_option)
+            if query_args is None:
+                raise Exception(
+                    f"Query option: {query_arg_option} is not supported. Please add it to config file or provide improvised queries.")
+        else:
+            raise Exception("Either query_arg_option or queries should be provided.")
+        query_args.update({'field': query_arg_option})
+        query_args.update({"updated_time_range": [startTS, endTS]})
+        return query_args
+
+    @staticmethod
+    def get_time_duration(time_interval_name):
+        startTS, endTS = TIMEINTERVAL[time_interval_name].update
+        return startTS, endTS
 
     def initialize_environment(self, llm_config_path, db_config_path, model_selected, target_language, storage_path):
         logger.info("Starts to initialize environment")
@@ -113,11 +63,18 @@ class ArxivFlow:
         logger.success("Environment initialized.")
 
     def default_routine(self):
-        # Step 1: Retrieve de-fault query reports.
-        for args in self.default_query_args_list:
+        query_args_option = CONFIG_DATA.get("Flow", {}).get("query_args_option")
+        _time_interval_str = CONFIG_DATA.get("Flow", {}).get("time_interval")
+        assert _time_interval_str in TIMEINTERVAL.__dict__, (f"time_interval: {_time_interval_str} in config is not "
+                                                             f"supported.")
+        startTS, endTS = self.get_time_duration(_time_interval_str)
+        for field in query_args_option:
+            args = self.assemble_query_args(startTS=startTS,
+                                            endTS=endTS,
+                                            query_arg_option=field,
+                                            queries=None)
             logger.debug(args)
             download_history_path = self.paper_retriever(**args)
-            # Step 2: Analyze
             workbook_path = self.paper_analyzer(download_history_path=download_history_path)
             logger.success(f"{str(args)} downloaded to {workbook_path}")
 

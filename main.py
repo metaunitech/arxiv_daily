@@ -25,6 +25,16 @@ storage_path_base = Path(CONFIG_DATA.get("Storage", {}).get("storage_path_base")
 auto_instance = AutoReply(llm_engine, storage_path_base)
 
 
+def send_all_rooms(reports):
+    all_rooms = wework.get_rooms().get("room_list", [])
+    all_room_c_ids = [] if not all_rooms else [i['conversation_id'] for i in all_rooms]
+    for c_id in all_room_c_ids:
+        for k in reports:
+            logger.info(f"Report send to {c_id}: {reports[k]}")
+            wework.send_text(c_id, k)
+            wework.send_file(c_id, reports[k])
+
+
 @wework.msg_register(ntwork.MT_RECV_TEXT_MSG)
 def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
     data = message["data"]
@@ -32,19 +42,12 @@ def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
     self_user_id = wework_instance.get_login_info()["user_id"]
     conversation_id: str = data["conversation_id"]
 
-
-    # if sender_user_id == self_user_id:
     if sender_user_id == self_user_id and data['content'] == '发送日报':
         reports = auto_instance.get_date_reports()
-        all_rooms = wework.get_rooms().get("room_list", [])
-        all_room_c_ids = [] if not all_rooms else [i['conversation_id'] for i in all_rooms]
-        for c_id in all_room_c_ids:
-            for k in reports:
-                logger.info(f"Report send to {c_id}: {reports[k]}")
-                wework.send_text(c_id, k)
-                wework.send_file(c_id, reports[k])
+        send_all_rooms(reports)
 
-    elif sender_user_id != self_user_id and '发送日报' in data['content'] and self_user_id in [i.get("user_id") for i in data['at_list']]:
+    elif sender_user_id != self_user_id and '发送日报' in data['content'] and self_user_id in [i.get("user_id") for i in
+                                                                                               data['at_list']]:
         reports = auto_instance.get_date_reports()
         if not reports:
             wework_instance.send_room_at_msg(conversation_id=conversation_id,
@@ -80,13 +83,7 @@ try:
             logger.info(f"Current time: {current_datetime}")
             time.sleep(2)
             reports = auto_instance.get_date_reports()
-            all_rooms = wework.get_rooms().get("room_list", [])
-            all_room_c_ids = [] if not all_rooms else [i['conversation_id'] for i in all_rooms]
-            for c_id in all_room_c_ids:
-                for k in reports:
-                    logger.info(f"Report send to {c_id}: {reports[k]}")
-                    wework.send_text(c_id, k)
-                    wework.send_file(c_id, reports[k])
+            send_all_rooms(reports)
 
 
 except KeyboardInterrupt:
