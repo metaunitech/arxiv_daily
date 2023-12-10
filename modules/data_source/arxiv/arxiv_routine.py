@@ -10,7 +10,7 @@ from datetime import datetime
 # import pytz
 from loguru import logger
 from pathlib import Path
-from modules.models.duration_utils import TIMEINTERVAL, get_time_interval, update_time_interval
+from modules.models.duration_utils import TIMEINTERVAL
 
 
 class ArxivFlow:

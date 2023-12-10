@@ -20,6 +20,7 @@ from pathlib import Path
 import datetime
 
 import xmind
+from XmindCopilot import XmindCopilot
 
 
 class BulkAnalysis:
@@ -135,7 +136,7 @@ Output:
         if not papers:
             return None
         bulk_papers_xmind_path = batch_path / f'{field}领域论文总结_{str(datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S"))}.xmind'
-        workbook = xmind.load(bulk_papers_xmind_path)
+        workbook = XmindCopilot.load(bulk_papers_xmind_path)
         main_sheet = workbook.getPrimarySheet()
         root_topic = main_sheet.getRootTopic()
         root_topic.setTitle(papers_description)
@@ -156,14 +157,15 @@ Output:
             paper_sheet, keypoints = self.__paper_parser.generate_paper_xmind(paper_instance=paper,
                                                                               workbook=workbook,
                                                                               field=field,
-                                                                              additional_node=root_topic)
+                                                                              additional_node=root_topic,
+                                                                              batch_path=batch_path)
             if keypoints:
                 for keypoint in keypoints.model_dump().get('keypoints', []):
                     _subtitle = paper_node.addSubTopic()
                     _subtitle.setTitle(keypoint)
                     _subtitle.setStyleID()
             paper_node.setTopicHyperlink(paper_sheet.getRootTopic().getID())
-        xmind.save(workbook)
+        XmindCopilot.save(workbook)
         if bulk_papers_xmind_path.exists():
             fix_xmind(str(bulk_papers_xmind_path.absolute()))
         return bulk_papers_xmind_path

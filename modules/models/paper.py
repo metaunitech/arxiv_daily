@@ -2,6 +2,7 @@ import fitz, io, os
 from PIL import Image
 from loguru import logger
 import re
+from modules.pdf_extract import *
 
 
 class Paper:
@@ -26,6 +27,7 @@ class Paper:
         self.roman_num = ["I", "II", 'III', "IV", "V", "VI", "VII", "VIII", "IIX", "IX", "X"]
         self.digit_num = [str(d + 1) for d in range(10)]
         self.first_image = ''
+        self.PDFF2data = parsePDF_PDFFigures2(path)
 
     def parse_pdf(self):
         self.pdf = fitz.open(self.path)  # pdf文档
@@ -55,11 +57,12 @@ class Paper:
         :param image_path: 图片提取后的保存路径
         :return:
         """
+        import time
         # open file
         max_size = 0
-        image_list = []
         with fitz.Document(self.path) as my_pdf_file:
             # 遍历所有页面
+            imgs = {}
             for page_number in range(1, len(my_pdf_file) + 1):
                 # 查看独立页面
                 page = my_pdf_file[page_number - 1]
@@ -69,6 +72,8 @@ class Paper:
                 for image_number, image in enumerate(page.get_images(), start=1):
                     # 访问图片xref
                     xref_value = image[0]
+                    # image name
+                    image_name = image[-2]
                     # 提取图片信息
                     base_image = my_pdf_file.extract_image(xref_value)
                     # 访问图片
@@ -80,28 +85,28 @@ class Paper:
                     image_size = image.size[0] * image.size[1]
                     if image_size > max_size:
                         max_size = image_size
-                    image_list.append(image)
-        for image in image_list:
+                    imgs[image_name] = image
+        output = {}
+
+        for image_name in imgs.keys():
             image_size = image.size[0] * image.size[1]
-            if image_size == max_size:
-                image_name = f"image.{ext}"
-                im_path = os.path.join(image_path, image_name)
-                logger.debug("im_path:", im_path)
+            image_file_name = f"image_{image_name}.{ext}"
+            logger.info(image_name)
+            im_path = os.path.join(image_path, image_file_name)
+            logger.debug(f"im_path: {im_path}")
 
-                max_pix = 480
-                # origin_min_pix = min(image.size[0], image.size[1])
+            max_pix = 480
 
-                if image.size[0] > image.size[1]:
-                    min_pix = int(image.size[1] * (max_pix / image.size[0]))
-                    newsize = (max_pix, min_pix)
-                else:
-                    min_pix = int(image.size[0] * (max_pix / image.size[1]))
-                    newsize = (min_pix, max_pix)
-                image = image.resize(newsize)
-
-                image.save(open(im_path, "wb"))
-                return im_path, ext
-        return None, None
+            if image.size[0] > image.size[1]:
+                min_pix = int(image.size[1] * (max_pix / image.size[0]))
+                newsize = (max_pix, min_pix)
+            else:
+                min_pix = int(image.size[0] * (max_pix / image.size[1]))
+                newsize = (min_pix, max_pix)
+            image = image.resize(newsize)
+            image.save(open(im_path, "wb"))
+            output[image_name] = image_path
+        return output
 
     # 定义一个函数，根据字体的大小，识别每个章节名称，并返回一个列表
     def get_chapter_names(self, ):
@@ -204,7 +209,7 @@ class Paper:
 
     @staticmethod
     def extract_arxiv_paper(text):
-        pass
+        res = re.search(r'arXiv:\d+\.\d+')
     
 
     def get_reference(self):
@@ -212,11 +217,11 @@ class Paper:
         if reference_page_idx is None:
             logger.error("Cannot find references.")
             return []
-        logger.debug(f"Reference page range: {reference_page_idx}-{self.pdf.page_count}")
+        logger.debug(f"Reference page range: {reference_page_idx}-{self.pdf.page_count-1}")
         reference_pages_raw = ''
         for i in range(reference_page_idx, self.pdf.page_count):
             reference_pages_raw += self.pdf[i].get_text()
-        print("HERE")
+        logger.debug(reference_pages_raw)
 
     def _get_all_page_index(self):
         # 定义需要寻找的章节名称列表
@@ -313,12 +318,264 @@ class Paper:
                 section_dict[sec_name] = cur_sec_text.replace('-\n', '').replace('\n', ' ')
         return section_dict
 
+    ### MODIFIED FROM CHATPAPER2XMIND
+
+    def get_section_equationdict(self, legacy=False):
+        """
+        Get equation dict of each section
+
+        :param legacy: True for legacy equation extraction method
+        :return: Dict of section titles with tuple item list
+        (equation_text_pos, page_number, equation_bbox)
+        """
+        eqa_ls = []
+        for i in range(len(self.pdf)):
+            page = self.pdf[i]
+            if legacy:
+                eq_box = get_eqbox(page)
+            else:
+                eq_box = getEqRect(page)
+            if eq_box:
+                for box in eq_box:
+                    eqa_ls.append((get_box_textpos(page, box, self.all_text),
+                                   i, box))
+        section_title = self.get_section_titles()
+        pos_dict = self.get_section_textposdict()
+        section_dict = {}
+        for title in section_title[:-1]:
+            section_dict[title] = []
+            for eqa in eqa_ls:
+                if eqa[0] > pos_dict[title][0] and eqa[0] <= pos_dict[title][1]:
+                    section_dict[title].append(eqa)
+                elif section_dict[title]:
+                    break
+        return section_dict
+
+
+
+    def gen_image(self, snap_with_caption, verbose=False):
+        """
+        Generate image for each section in xmind (Figure/Table)
+        """
+        section_names = self.paper.get_section_titles()
+        img_dict = self.paper.get_section_imagedict(
+            snap_with_caption=snap_with_caption, verbose=verbose)
+        for name in section_names[:-1]:
+            img_ls = img_dict.get(name)
+            if img_ls:
+                for img in img_ls:
+                    img_tempdir = get_objpixmap(self.paper.pdf, img)
+                    topic = topic_search(self, name).addSubTopicbyImage(
+                        img_tempdir, img_ls.index(img))
+                    # FIXME: This is a temporary solution for compatibility
+                    if len(img) == 4:
+                        topic.setTitle(img[3])
+                        topic.setTitleSvgWidth()
+    def gen_equation(self, legacy=True):
+        """
+        Generate equation for each section in xmind
+
+        :param legacy: if True, use legacy method to extract\
+            equation, else use new method.
+        `NOTE` It seems that legacy method is more accurate.
+        """
+        section_names = self.paper.get_section_titles()
+        eqa_dict = self.paper.get_section_equationdict(legacy=legacy)
+        for name in section_names[:-1]:
+            eqa_ls = eqa_dict.get(name)
+            if eqa_ls:
+                for eqa in eqa_ls:
+                    eqa_tempdir = get_objpixmap(self.paper.pdf, eqa)
+                    topic_search(self, name).addSubTopicbyImage(
+                        eqa_tempdir, eqa_ls.index(eqa))
+
+        # Section Dict Extract
+    def get_section_titles(self, withlevel=False, verbose=False):
+        section_title = []
+        # ref_break_flag = False
+        level1_matchstr = SECTION_TITLE_MATCHSTR[0]
+        level2_matchstr = SECTION_TITLE_MATCHSTR[1]
+        for page in self.pdf:
+            blocks = page.get_text("dict", flags=0)["blocks"]
+            for block in blocks:
+                # Assume: Section title is the first "Line" or multiple "Lines" that have the same y position in one "block"
+                is_equation = False
+                lines = block["lines"]
+                pos_y = block["lines"][0]["bbox"][1]
+                tol = 1
+                line_text = ""
+                for line in lines:
+                    for span in line["spans"]:
+                        if span['font'].startswith('CM') or span['font'].startswith('MSBM'):
+                            is_equation = True
+                            break
+                    if abs(pos_y - line["bbox"][1]) < tol:
+                        line_text = line_text + "".join([span["text"] for span in line["spans"]]) + "\n"
+                    else:
+                        break
+                if is_inbox(block['bbox'][0:2], get_bounding_box(getColumnRectLegacy(page, ymargin=40))) \
+                        and is_inbox(block['bbox'][2:4],
+                                     get_bounding_box(getColumnRectLegacy(page, ymargin=40))) and not is_equation:
+                    if re.match(level2_matchstr, line_text):
+                        if line_text.startswith('I.') and len(section_title) < 7:  # Considering I. i.e. ABCDEFGHI
+                            section_title.append((line_text, 1))
+                        else:
+                            section_title.append((line_text, 2))
+                    elif re.match(level1_matchstr, line_text):
+                        section_title.append((line_text, 1))
+                # if re.match(REF_MATCHSTR, line_text):
+                #     ref_break_flag = True
+                #     break
+            #     if ref_break_flag:
+            #         break
+            # if ref_break_flag:
+            #     break
+        section_title = [(re.search(ABS_MATCHSTR, self.all_text).group(), 1)] \
+                        + section_title \
+                        + [(re.search(REF_MATCHSTR, self.all_text).group(), 1)]
+        return section_title if withlevel else [t[0] for t in section_title]
+
+    def get_section_textposdict(self):
+        section_title = self.get_section_titles()
+        section_dict = {}
+        for i in range(0, len(section_title) - 1):
+            title = section_title[i]
+            latter_title = section_title[i + 1]
+            begin_pos = self.all_text.find(title)
+            end_pos = self.all_text.find(latter_title)
+            section_dict[title] = (begin_pos, end_pos)
+            if begin_pos == -1:
+                print(f"Warning: {title} not found in all_text.")
+        return section_dict
+
+    def get_section_textdict(self, remove_title=False):
+        """
+        Get section text dict of the paper.
+        :return: Dict of section titles with text content
+        FIXME: This will not get Reference content
+        """
+        section_title = self.get_section_titles(withlevel=False)
+        pos_dict = self.get_section_textposdict()
+        section_dict = {}
+        for title in section_title[:-1]:
+            if not remove_title:
+                section_dict[title] = self.all_text[pos_dict[title][0]:pos_dict[title][1]]
+            else:
+                section_dict[title] = self.all_text[pos_dict[title][0] + len(title):pos_dict[title][1]]
+        return section_dict
+
+    def get_section_equationdict(self, legacy=False):
+        """
+        Get equation dict of each section
+
+        :param legacy: True for legacy equation extraction method
+        :return: Dict of section titles with tuple item list
+        (equation_text_pos, page_number, equation_bbox)
+        """
+        eqa_ls = []
+        for i in range(len(self.pdf)):
+            page = self.pdf[i]
+            if legacy:
+                eq_box = get_eqbox(page)
+            else:
+                eq_box = getEqRect(page)
+            if eq_box:
+                for box in eq_box:
+                    eqa_ls.append((get_box_textpos(page, box, self.all_text),
+                                   i, box))
+        section_title = self.get_section_titles()
+        pos_dict = self.get_section_textposdict()
+        section_dict = {}
+        for title in section_title[:-1]:
+            section_dict[title] = []
+            for eqa in eqa_ls:
+                if eqa[0] > pos_dict[title][0] and eqa[0] <= pos_dict[title][1]:
+                    section_dict[title].append(eqa)
+                elif section_dict[title]:
+                    break
+        return section_dict
+
+    def get_section_imagedict_default(self, verbose=False, snap_with_caption=True):
+        """
+        Get image dict of each section
+
+        :return: Dict of section titles with tuple item list
+        (img_text_pos, page_number, img_bbox)
+        """
+        img_ls = []
+        for i in range(len(self.pdf)):
+            page = self.pdf[i]
+            img_box = getFigRect(page)
+            if img_box:
+                for box in img_box:
+                    img_ls.append((get_box_textpos(page, box, self.all_text),
+                                   i, box))
+        if verbose:
+            logger.debug(f'Total images found: {str(len(img_ls))}')
+        section_title = self.get_section_titles()
+        pos_dict = self.get_section_textposdict()
+        section_dict = {}
+        match_cnt = 0
+        for title in section_title[:-1]:
+            section_dict[title] = []
+            for img in img_ls:
+                if img[0] > pos_dict[title][0] and img[0] < pos_dict[title][1]:
+                    section_dict[title].append(img)
+                    match_cnt += 1
+                # elif section_dict[title]:
+                #     break
+        if verbose:
+            logger.debug('Images match the content: f{match_cnt}')
+        return section_dict
+
+    def get_section_imagedict_jvm(self, snap_with_caption=True, verbose=False):
+        """
+        Get image dict of each section
+        :return: Dict of section titles with tuple item list
+        (img_text_pos, page_number, img_bbox, img_caption)
+        """
+        img_ls = []
+        for d in self.PDFF2data['figures']:
+            if snap_with_caption:
+                box = get_bounding_box([
+                    (d['regionBoundary']['x1'], d['regionBoundary']['y1'],
+                     d['regionBoundary']['x2'], d['regionBoundary']['y2']),
+                    (d['captionBoundary']['x1'], d['captionBoundary']['y1'],
+                     d['captionBoundary']['x2'], d['captionBoundary']['y2'])])
+                img_ls.append((get_box_textpos(self.pdf[d['page']], box, self.all_text),
+                               d['page'], box))
+            else:
+                box = (d['regionBoundary']['x1'], d['regionBoundary']['y1'],
+                       d['regionBoundary']['x2'], d['regionBoundary']['y2'])
+                img_ls.append((get_box_textpos(self.pdf[d['page']], box, self.all_text),
+                               d['page'], box, d['caption']))
+        if verbose:
+            logger.debug(f'Total images found: {str(len(img_ls))}')
+        section_title = self.get_section_titles()
+        pos_dict = self.get_section_textposdict()
+        section_dict = {}
+        match_cnt = 0
+        for title in section_title[:-1]:
+            section_dict[title] = []
+            # if verbose:
+            #     print('Title:', title, 'Begin pos:',
+            #           pos_dict[title][0], 'End pos:', pos_dict[title][1])
+            for img in img_ls:
+                if img[0] > pos_dict[title][0] and img[0] < pos_dict[title][1]:
+                    section_dict[title].append(img)
+                    match_cnt += 1
+                # elif section_dict[title]:
+                #     break
+        # if verbose:
+        #     print('Images match the content:', match_cnt)
+        return section_dict
 
 def main():
-    path = r'W:\paper\LLM\Augmenting Language Models with Long-Term Memory.pdf'
+    path = r'W:\Personal_Project\metaunitech\arxiv_daily\demo2.pdf'
     paper = Paper(path=path)
     paper.parse_pdf()
     paper.get_chapter_names()
+    paper.get_image_path()
     for key, value in paper.section_text_dict.items():
         logger.debug(f"{key}, {value}")
         logger.debug("*" * 40)
