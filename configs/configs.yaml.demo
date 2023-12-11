@@ -1,21 +1,47 @@
 LLM:
-  llm_config_path: ****
-  model_selected: gpt-35-turbo-16k
+  llm_config_path: ***\llm_configs.yaml
+  model_selected: chatglm_turbo
 
 Storage:
-  storage_path_base: ./storage
+  storage_path_base: ***\storage
 
+DB:
+  config_path: ***\db_config.yaml
 
 Arxiv:
   queries:
     LLM:
-      diy_query_str: ti:LLM OR ti:Agent OR ti:agent OR ti:llm OR ti:GPT OR ti:gpt OR ti:chat
+      diy_query_str: ti:LLM OR ti:Agent OR ti:agent OR ti:llm OR ti:GPT OR ti:gpt
     NLP:
       diy_query_str: cat:cs.CL
 #      target_primary_category: cs.CL
+    Transformer:
+      diy_query_str: ti:transformer
+      target_primary_category: cs.AI
+    RAG:
+      diy_query_str: ti:RAG OR abs:RAG
 
 Flow:
-  time_interval: DAILY
-  query_args_option: LLM
+  time_interval: DUALDAYS
+  query_args_option:
+#    - Transformer
+    - LLM
   target_language: Chinese
 
+environment:
+  default_chromedriver_path: ***\chromedriver.exe
+  default_chromedriver_version: 119
+  cookie_storage_path: ***\__cookies__
+
+runtime_settings:
+  global_time_wait: 5
+  default_chrome_download_path: ***\storage
+  if_headless: true
+
+endpoints:
+  zhihu: https://www.zhihu.com/
+
+accounts:
+  zhihu:
+    account_name: 18***70
+    password: 8***n!
