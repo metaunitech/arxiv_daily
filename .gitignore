@@ -1,3 +1,4 @@
 **/*.yaml
 **/__pycache__
 **/paper_raw/*
+**/src/chromedriver.exe

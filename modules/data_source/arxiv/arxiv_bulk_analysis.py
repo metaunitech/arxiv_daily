@@ -209,7 +209,6 @@ Output:
                 logger.debug(traceback.format_exc())
                 summary = '暂无总结'
             logger.success(f"SUMMARY: \n {summary}")
-        # bulk_description_data['description'] = summary
 
         paper_description_str = self.generate_paper_description(bulk_description_data)
         logger.info(
@@ -224,8 +223,7 @@ Output:
         xmind_shrink(workbook_path)
 
         return workbook_path
-        # res = self.refine_analyze_bulk_paper(papers=papers, field="CS", bulk_paper_summary_json_path=summary_json)
-        # logger.success(res)
+
 
     def refine_main(self, download_history_path: Path):
         with open(download_history_path, 'r') as f:
