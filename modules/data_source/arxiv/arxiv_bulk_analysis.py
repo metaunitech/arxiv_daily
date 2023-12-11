@@ -134,7 +134,7 @@ Output:
         return result['output_text']
 
     def generate_paper_xmind(self, papers: List[Paper], papers_description: str, summary: str, batch_path: Path,
-                             field=None):
+                             field=None, zhihu_instance=None):
         if not papers:
             return None
         bulk_papers_xmind_path = batch_path / f'{field}领域论文总结_{str(datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S"))}.xmind'
@@ -158,6 +158,22 @@ Output:
             title_str = f'{chinese_title}\n({paper.title})' if chinese_title else paper.title
             title_str = self.reformat_string(title_str, 100)
             paper_node.setTitle(title_str)
+
+            if zhihu_instance:
+                logger.info("Starts to search zhihu quote")
+                try:
+                    zhihu_results = zhihu_instance.search_keyword('2308.13418v1')
+                except Exception as e:
+                    logger.warning(str(e))
+                    zhihu_results = []
+
+                zhihu_quote_node = root_topic.addSubTopic()
+                zhihu_quote_node.setTitle(f'知乎上被引用：{str(len(zhihu_results))}次')
+
+                for post in zhihu_results:
+                    new_node = zhihu_quote_node.addSubTopic()
+                    new_node.setTitle(post['content_raw'].split('\n')[0])
+                    new_node.setURLHyperlink(post['url'])
             paper_sheet, keypoints = self.__paper_parser.generate_paper_xmind(paper_instance=paper,
                                                                               workbook=workbook,
                                                                               field=field,
@@ -184,7 +200,7 @@ Output:
                 paper_description += f'{key.upper()}: {description_dict[key]}\n'
         return paper_description
 
-    def main(self, download_history_path: Path):
+    def main(self, download_history_path: Path, zhihu_instance=None):
         with open(download_history_path, 'r') as f:
             data = json.load(f)
         paper_data = data.get('download_history', {})
@@ -218,12 +234,12 @@ Output:
                                                   papers_description=paper_description_str,
                                                   summary=summary,
                                                   batch_path=batch_path,
-                                                  field=bulk_description_data.get("field", None))
+                                                  field=bulk_description_data.get("field", None),
+                                                  zhihu_instance=zhihu_instance)
         logger.info(f"Starts to shrink workbook: {workbook_path}")
         xmind_shrink(workbook_path)
 
         return workbook_path
-
 
     def refine_main(self, download_history_path: Path):
         with open(download_history_path, 'r') as f:

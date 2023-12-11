@@ -4,18 +4,17 @@ from modules.data_source.arxiv import PaperParser, PaperRetriever, BulkAnalysis
 from modules import RawDataStorage
 from configs import CONFIG_DATA
 from modules.llm_utils import ChatModelLangchain
-# from enum import Enum
 from datetime import datetime
-# from dateutil.relativedelta import relativedelta
-# import pytz
 from loguru import logger
 from pathlib import Path
 from modules.models.duration_utils import TIMEINTERVAL
 
 
 class ArxivFlow:
-    def __init__(self):
-        logger.info("Validating and retrieving data from GLOBAL CONFIG")
+    def __init__(self, config_path):
+        if not config_path:
+            logger.info("Validating and retrieving data from GLOBAL CONFIG")
+            config_path = CONFIG_DATA
         # LLM
         llm_config_path = Path(CONFIG_DATA.get("LLM", {}).get("llm_config_path"))
         model_selected = CONFIG_DATA.get("LLM", {}).get("model_selected")
@@ -62,7 +61,7 @@ class ArxivFlow:
         self.paper_analyzer = BulkAnalysis(self.llm_engine, self.db_instance, self.paper_parser)
         logger.success("Environment initialized.")
 
-    def default_routine(self):
+    def default_routine(self, zhihu_instance):
         query_args_option = CONFIG_DATA.get("Flow", {}).get("query_args_option")
         _time_interval_str = CONFIG_DATA.get("Flow", {}).get("time_interval")
         assert _time_interval_str in TIMEINTERVAL.__dict__, (f"time_interval: {_time_interval_str} in config is not "
@@ -76,7 +75,8 @@ class ArxivFlow:
                                             queries=None)
             logger.debug(args)
             download_history_path = self.paper_retriever(**args)
-            workbook_path = self.paper_analyzer(download_history_path=download_history_path)
+            workbook_path = self.paper_analyzer(download_history_path=download_history_path,
+                                                zhihu_instance=zhihu_instance)
 
             logger.success(f"{str(args)} downloaded to {workbook_path}")
 

@@ -67,10 +67,11 @@ class ZhihuSearch:
             logger.error("Not yet logged in. Cookie expired. You need to login again")
             return False
 
-    def search(self, keyword, strict=True):
+    def search(self, keyword, strict=True, timeout=300):
         logger.info("Start to search.")
         key_in_input(self.driver, 'Input', keyin_value=keyword, target_attribute='@class')
         click_btn(self.driver, btn_name='搜索', target_attribute='@aria-label')
+        start_ts = time.time()
         while 1:
             logger.info("Starts to scroll down.")
             self.driver.execute_script("var q=document.documentElement.scrollTop=100000")
@@ -86,6 +87,8 @@ class ZhihuSearch:
             if is_end:
                 logger.warning("Already hit end.")
                 break
+            if time.time() - start_ts >= timeout:
+                raise SearchException.RuntimeException(f"Fail to login after {timeout} seconds.")
         all_results = self.driver.find_elements_by_xpath("//div[@class='Card SearchResult-Card']")
         if strict:
             output = [{'url': e.find_element_by_xpath("//meta[@itemprop='url']").get_attribute('content'),
