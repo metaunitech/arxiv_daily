@@ -67,6 +67,7 @@ class ArxivFlow:
         _time_interval_str = CONFIG_DATA.get("Flow", {}).get("time_interval")
         assert _time_interval_str in TIMEINTERVAL.__dict__, (f"time_interval: {_time_interval_str} in config is not "
                                                              f"supported.")
+        logger.debug(_time_interval_str)
         startTS, endTS = self.get_time_duration(_time_interval_str)
         for field in query_args_option:
             args = self.assemble_query_args(startTS=startTS,
@@ -76,6 +77,7 @@ class ArxivFlow:
             logger.debug(args)
             download_history_path = self.paper_retriever(**args)
             workbook_path = self.paper_analyzer(download_history_path=download_history_path)
+
             logger.success(f"{str(args)} downloaded to {workbook_path}")
 
     def daily_routine(self):

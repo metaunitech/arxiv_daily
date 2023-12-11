@@ -340,20 +340,39 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
                     _value_subtitle = _subtitle.addSubTopic()
                     _value_subtitle.setTitle(self.reformat_string(node_value))
         # APPEND IMAGES:
-        section_names = paper_instance.get_section_titles()
-        img_dict = paper_instance.get_section_imagedict_jvm()
-        for name in section_names[:-1]:
-            img_ls = img_dict.get(name)
-            if img_ls:
-                for img in img_ls:
-                    img_tempdir = get_objpixmap(paper_instance.pdf, img)
-                    topic = root_topic.addSubTopicbyImage(
-                        img_tempdir, img_ls.index(img))
-                    # FIXME: This is a temporary solution for compatibility
-                    if len(img) == 4:
-                        topic.setTitle(img[3])
-                        topic.setTitleSvgWidth()
-
+        try:
+            section_names = paper_instance.get_section_titles()
+        except:
+            section_names = []
+        try:
+            img_dict = paper_instance.get_section_imagedict_jvm()
+        except:
+            img_dict = {}
+        if section_names:
+            for name in section_names[:-1]:
+                img_ls = img_dict.get(name)[::-1]
+                if img_ls:
+                    section_node = root_topic.addSubTopic()
+                    section_node.setTitle(name)
+                    for img in img_ls:
+                        img_tempdir = get_objpixmap(paper_instance.pdf, img)
+                        topic = section_node.addSubTopicbyImage(img_tempdir, img_ls.index(img))
+                        # FIXME: This is a temporary solution for compatibility
+                        if len(img) == 4:
+                            topic.setTitle(img[3])
+                            topic.setTitleSvgWidth()
+        else:
+            for name in img_dict.keys():
+                if img_dict[name]:
+                    section_node = root_topic.addSubTopic(name)
+                    img_ls = img_dict[name][::-1]
+                    for img in img_ls:
+                        img_tempdir = get_objpixmap(paper_instance.pdf, img)
+                        topic = section_node.addSubTopicbyImage(img_tempdir, img_ls.index(img))
+                        # FIXME: This is a temporary solution for compatibility
+                        if len(img) == 4:
+                            topic.setTitle(img[3])
+                            topic.setTitleSvgWidth()
         if if_save_workbook:
             XmindCopilot.save(workbook=workbook)
         return sheet, keypoints

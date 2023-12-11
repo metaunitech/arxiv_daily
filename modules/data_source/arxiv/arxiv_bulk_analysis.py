@@ -6,6 +6,7 @@ from .arxiv_paper_parser import PaperParser
 from modules.xmind_related import fix_xmind
 from langchain.prompts import PromptTemplate
 import arxiv
+import traceback
 
 import time
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -21,6 +22,7 @@ import datetime
 
 import xmind
 from XmindCopilot import XmindCopilot
+from XmindCopilot.XmindCopilot.file_shrink import xmind_shrink
 
 
 class BulkAnalysis:
@@ -140,7 +142,9 @@ Output:
         main_sheet = workbook.getPrimarySheet()
         root_topic = main_sheet.getRootTopic()
         root_topic.setTitle(papers_description)
-        root_topic.setPlainNotes("所有论文总结：\n"+summary)
+        all_summary_node = root_topic.addSubTopic()
+        all_summary_node.setTitle('所有论文总结')
+        all_summary_node.setPlainNotes("所有论文总结：\n" + summary)
         for paper in papers:
             paper_node = root_topic.addSubTopic()
             chinese_title = self.__db_instance.get_chinese_title(paper.url)
@@ -193,6 +197,7 @@ Output:
             except Exception as e:
                 logger.error(f'paper: {i}')
                 logger.error(e)
+                logger.debug(traceback.format_exc())
                 continue
         summary = None
         if papers:
@@ -215,6 +220,8 @@ Output:
                                                   summary=summary,
                                                   batch_path=batch_path,
                                                   field=bulk_description_data.get("field", None))
+        logger.info(f"Starts to shrink workbook: {workbook_path}")
+        xmind_shrink(workbook_path)
 
         return workbook_path
         # res = self.refine_analyze_bulk_paper(papers=papers, field="CS", bulk_paper_summary_json_path=summary_json)

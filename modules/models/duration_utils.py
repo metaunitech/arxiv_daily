@@ -36,7 +36,7 @@ class TIMEINTERVAL(Enum):
             end_time = timezone.localize(
                 datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
         elif self == TIMEINTERVAL.WEEKLY:
-            week_start = current_datetime - timedelta(days=current_datetime.weekday())
+            week_start = current_datetime - timedelta(days=7)
             start_time = timezone.localize(datetime(week_start.year, week_start.month, week_start.day, 0, 0, 0))
             end_time = timezone.localize(
                 datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
