@@ -160,14 +160,15 @@ Output:
             paper_node.setTitle(title_str)
 
             if zhihu_instance:
-                logger.info("Starts to search zhihu quote")
+                query = paper.url.split('/')[-1]
+                logger.info(f"Starts to search zhihu quote for {query}")
                 try:
-                    zhihu_results = zhihu_instance.search_keyword('2308.13418v1')
+                    zhihu_results = zhihu_instance.search_keyword(query)
                 except Exception as e:
                     logger.warning(str(e))
                     zhihu_results = []
 
-                zhihu_quote_node = root_topic.addSubTopic()
+                zhihu_quote_node = paper_node.addSubTopic()
                 zhihu_quote_node.setTitle(f'知乎上被引用：{str(len(zhihu_results))}次')
 
                 for post in zhihu_results:
@@ -237,7 +238,10 @@ Output:
                                                   field=bulk_description_data.get("field", None),
                                                   zhihu_instance=zhihu_instance)
         logger.info(f"Starts to shrink workbook: {workbook_path}")
-        xmind_shrink(workbook_path)
+        try:
+            xmind_shrink(workbook_path)
+        except:
+            pass
 
         return workbook_path
 

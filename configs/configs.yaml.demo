@@ -15,17 +15,23 @@ Arxiv:
     NLP:
       diy_query_str: cat:cs.CL
 #      target_primary_category: cs.CL
+    CognitiveArch:
+      diy_query_str: ti:cognitive AND (all:Agent OR all:LLM)
+    KG+LLM:
+      diy_query_str: ti:knowledge Graph AND ti:LLM
     Transformer:
       diy_query_str: ti:transformer
-      target_primary_category: cs.AI
+      target_primary_category: cs
     RAG:
-      diy_query_str: ti:RAG OR abs:RAG
+      diy_query_str: all:RAG
 
 Flow:
-  time_interval: DUALDAYS
+  time_interval: WEEKLY
   query_args_option:
-#    - Transformer
     - LLM
+    - RAG
+    - Transformer
+    - KG+LLM
   target_language: Chinese
 
 environment:

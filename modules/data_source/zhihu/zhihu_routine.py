@@ -1,7 +1,7 @@
 import os
 
-from zhihu_search import ZhihuSearch
-from zhihu_login import ZhihuLogin
+from .zhihu_search import ZhihuSearch
+from .zhihu_login import ZhihuLogin
 from pathlib import Path
 from modules.rpa_utils.general_utils import CONFIG_PATH
 import yaml
@@ -46,6 +46,6 @@ class ZhihuFlow:
 
 
 if __name__ == "__main__":
-    ins = ZhihuFlow(Path(r"W:\Personal_Project\metaunitech\arxiv_daily\configs\configs.yaml"))
+    ins = ZhihuFlow(Path(r"W:\arxiv_daily\configs\configs.yaml"))
     res = ins.search_keyword('2308.13418v1')
     print(res)

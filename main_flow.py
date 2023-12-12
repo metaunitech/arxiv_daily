@@ -1,4 +1,5 @@
-from modules.data_source import ArxivFlow, ZhihuFlow
+from modules.data_source.arxiv.arxiv_routine import ArxivFlow
+from modules.data_source.zhihu.zhihu_routine import ZhihuFlow
 from pathlib import Path
 from loguru import logger
 from datetime import datetime
@@ -13,9 +14,11 @@ def main():
 
     while 1:
         current_datetime = datetime.now()
-        time_delta = current_datetime - datetime(current_datetime.year, current_datetime.month, cuuurrent_datetime.day, 1,
+        time_delta = current_datetime - datetime(current_datetime.year, current_datetime.month, current_datetime.day, 1,
                                                  0, 0)
         if 5 > time_delta.seconds > 0:
             logger.info(f"Current time: {current_datetime}")
-            arxiv_flow = ArxivFlow()
             arxiv_flow.default_routine(zhihu_instance=zhihu_flow)
+
+if __name__ == "__main__":
+    main()

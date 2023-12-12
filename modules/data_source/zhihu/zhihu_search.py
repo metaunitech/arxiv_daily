@@ -82,7 +82,7 @@ class ZhihuSearch:
                 break
             if strict and keyword not in current_cards[-1].text:
                 logger.warning("Keyword is not in last card. Break for strict mode")
-
+                break
             is_end = self.driver.find_elements_by_xpath("//*[contains(text(), '没有更多了')]")
             if is_end:
                 logger.warning("Already hit end.")
