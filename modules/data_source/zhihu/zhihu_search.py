@@ -70,7 +70,7 @@ class ZhihuSearch:
     def search(self, keyword, strict=True, timeout=300):
         logger.info("Start to search.")
         key_in_input(self.driver, 'Input', keyin_value=keyword, target_attribute='@class')
-        click_btn(self.driver, btn_name='搜索', target_attribute='@aria-label')
+        click_btn(self.driver, btn_class='button', btn_name='搜索', target_attribute='@aria-label')
         start_ts = time.time()
         while 1:
             logger.info("Starts to scroll down.")

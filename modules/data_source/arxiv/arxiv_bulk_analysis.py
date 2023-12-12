@@ -1,8 +1,10 @@
+import os
 import traceback
 from typing import List
 from modules.models import Paper
 from langchain.schema import Document
 from .arxiv_paper_parser import PaperParser
+from .arxiv_paper_retriever import PaperRetriever
 from modules.xmind_related import fix_xmind
 from langchain.prompts import PromptTemplate
 import arxiv
@@ -26,9 +28,10 @@ from XmindCopilot.XmindCopilot.file_shrink import xmind_shrink
 
 
 class BulkAnalysis:
-    def __init__(self, llm_engine, db_instance, paper_parser_instance: PaperParser):
+    def __init__(self, llm_engine, db_instance, paper_parser_instance: PaperParser, paper_retriever_instance: PaperRetriever):
         self.llm_engine = llm_engine
         self.__paper_parser = paper_parser_instance
+        self.__paper_retriever = paper_retriever_instance
         self.__db_instance = db_instance
 
     @staticmethod
@@ -210,7 +213,18 @@ Output:
         for i in paper_data.keys():
             try:
                 title = eval(paper_data[i]["info"]).get("title")
-                papers.append(Paper(path=paper_data[i]['downloaded_pdf_path'], url=i, title=title))
+                try:
+                    paper_ins = Paper(path=paper_data[i]['downloaded_pdf_path'], url=i, title=title)
+                except Exception as e:
+                    logger.warning(str(e))
+                    # logger.warning(f"Will remove :{paper_data[i]['downloaded_pdf_path']}")
+                    # if Path(paper_data[i]['downloaded_pdf_path']).exists():
+                    #     os.remove(paper_data[i]['downloaded_pdf_path'])
+                    # res = self.__paper_retriever.download_by_arxiv_id([i.split('/')[-1]])
+                    # title = res[i.split('/')[-1]][1].title
+                    # paper_ins = Paper(path=res[i.split('/')[-1]][0], url=i, title=title)
+                    continue
+                papers.append(paper_ins)
             except Exception as e:
                 logger.error(f'paper: {i}')
                 logger.error(e)

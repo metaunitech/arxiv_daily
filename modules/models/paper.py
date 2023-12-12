@@ -31,6 +31,10 @@ class Paper:
 
     def parse_pdf(self):
         self.pdf = fitz.open(self.path)  # pdf文档
+        if self.pdf.page_count == 0:
+            logger.error(f"File is broken: {self.title}")
+            self.pdf.close()
+            raise Exception("File broken.")
         self.text_list = [page.get_text() for page in self.pdf]
         self.all_text = ' '.join(self.text_list)
         self.section_page_dict = self._get_all_page_index()  # 段落与页码的对应字典
@@ -39,7 +43,7 @@ class Paper:
         self.section_text_dict.update({"title": self.title})
         self.section_text_dict.update({"paper_info": self.get_paper_info()})
         self.reference_list = self.get_reference()
-        # self.pdf.close()
+        self.pdf.close()
 
     def get_paper_info(self):
         first_page_text = self.pdf[self.title_page].get_text()
@@ -124,7 +128,8 @@ class Paper:
                 space_split_list = line.split(' ')
                 if 1 < len(space_split_list) < 5:
                     if 1 < len(point_split_list) < 5 and (
-                            point_split_list[0] + '\n' in self.roman_num or point_split_list[0] + '\n' in self.digit_num):
+                            point_split_list[0] + '\n' in self.roman_num or point_split_list[
+                        0] + '\n' in self.digit_num):
 
                         logger.debug(f"line: {line}")
                         chapter_names.append(line)
@@ -210,18 +215,17 @@ class Paper:
     @staticmethod
     def extract_arxiv_paper(text):
         res = re.search(r'arXiv:\d+\.\d+')
-    
 
     def get_reference(self):
         reference_page_idx = self.section_page_dict.get('References')
         if reference_page_idx is None:
             logger.error("Cannot find references.")
             return []
-        logger.debug(f"Reference page range: {reference_page_idx}-{self.pdf.page_count-1}")
+        logger.debug(f"Reference page range: {reference_page_idx}-{self.pdf.page_count - 1}")
         reference_pages_raw = ''
         for i in range(reference_page_idx, self.pdf.page_count):
             reference_pages_raw += self.pdf[i].get_text()
-        logger.debug(reference_pages_raw)
+        # logger.debug(reference_pages_raw)
 
     def _get_all_page_index(self):
         # 定义需要寻找的章节名称列表
@@ -351,8 +355,6 @@ class Paper:
                     break
         return section_dict
 
-
-
     def gen_image(self, snap_with_caption, verbose=False):
         """
         Generate image for each section in xmind (Figure/Table)
@@ -371,6 +373,7 @@ class Paper:
                     if len(img) == 4:
                         topic.setTitle(img[3])
                         topic.setTitleSvgWidth()
+
     def gen_equation(self, legacy=True):
         """
         Generate equation for each section in xmind
@@ -390,6 +393,7 @@ class Paper:
                         eqa_tempdir, eqa_ls.index(eqa))
 
         # Section Dict Extract
+
     def get_section_titles(self, withlevel=False, verbose=False):
         section_title = []
         # ref_break_flag = False
@@ -535,7 +539,7 @@ class Paper:
         (img_text_pos, page_number, img_bbox, img_caption)
         """
         img_ls = []
-        for d in self.PDFF2data['figures']:
+        for d in self.PDFF2data.get('figures', []):
             if snap_with_caption:
                 box = get_bounding_box([
                     (d['regionBoundary']['x1'], d['regionBoundary']['y1'],
@@ -569,6 +573,7 @@ class Paper:
         # if verbose:
         #     print('Images match the content:', match_cnt)
         return section_dict
+
 
 def main():
     path = r'W:\Personal_Project\metaunitech\arxiv_daily\demo2.pdf'

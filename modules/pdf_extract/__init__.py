@@ -760,7 +760,10 @@ def parsePDF_PDFFigures2(pdf_file: str):
     _ = subprocess.run(
         args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20
     )
-    return json.load(open(op.join(TEMP_DIR, op.basename(pdf_file).replace(".pdf", ".json")), encoding='utf-8'))
+    if 'No errors' in str(_.__dict__['stdout']):
+        if os.path.exists(op.join(TEMP_DIR, op.basename(pdf_file).replace(".pdf", ".json"))):
+            return json.load(open(op.join(TEMP_DIR, op.basename(pdf_file).replace(".pdf", ".json")), encoding='utf-8'))
+    return {}
 
 
 if __name__ == "__main__":

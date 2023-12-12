@@ -18,7 +18,10 @@ def main():
                                                  0, 0)
         if 5 > time_delta.seconds > 0:
             logger.info(f"Current time: {current_datetime}")
+            arxiv_flow = ArxivFlow(CONFIG_PATH)
+            zhihu_flow = ZhihuFlow(CONFIG_PATH)
             arxiv_flow.default_routine(zhihu_instance=zhihu_flow)
+
 
 if __name__ == "__main__":
     main()

@@ -206,6 +206,15 @@ class PaperRetriever:
     #         json.dump(task_description_dict, f, indent=4, ensure_ascii=False)
     #     return output_path
 
+    def download_by_arxiv_id(self, id_list):
+        res = arxiv.Search(id_list=id_list)
+        result_instance = res.results()
+        download_res = {}
+        for res_ins in result_instance:
+            downloaded_path = self.download(res_ins)
+            download_res[res_ins.entry_id.split('/')[-1]] = [downloaded_path, res_ins]
+        return download_res
+
     def main(self, summary_regex=None,
              title_regex=None,
              journal_ref_regex=None,

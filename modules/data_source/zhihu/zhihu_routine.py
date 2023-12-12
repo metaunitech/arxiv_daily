@@ -1,7 +1,10 @@
 import os
-
-from .zhihu_search import ZhihuSearch
-from .zhihu_login import ZhihuLogin
+try:
+    from .zhihu_search import ZhihuSearch
+    from .zhihu_login import ZhihuLogin
+except:
+    from zhihu_search import ZhihuSearch
+    from zhihu_login import ZhihuLogin
 from pathlib import Path
 from modules.rpa_utils.general_utils import CONFIG_PATH
 import yaml

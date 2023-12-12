@@ -104,6 +104,16 @@ class ZhihuLogin:
 
             logger.debug(f"Insert: {cookie_dict}")
             self.driver.add_cookie(cookie_dict)
+        if if_flag_element_exists(self.driver, "//*[contains(text(), '开始验证')]"):
+            logger.error("You need to verify your account.")
+            start_ts = time.time()
+            while 1:
+                if not if_flag_element_exists(self.driver, "//*[contains(text(), '开始验证')]"):
+                    logger.success("Verification success.")
+                    break
+                logger.error("You need to verify your account.")
+                if time.time()-start_ts>=300:
+                    raise LoginException.RuntimeException("Verification failed. Abort after 300 seconds.")
         self.driver.get(self.__endpoint)
         is_logged_in = self.is_logged_in()
         if not is_logged_in:
@@ -121,4 +131,4 @@ class ZhihuLogin:
 
 if __name__ == "__main__":
     ins = ZhihuLogin(if_headless=False)
-    ins.login('18516770170', '833020Fan!')
+    ins.login('18516770170', '833020Fan!', r'J:\Arxiv\__cookies__')

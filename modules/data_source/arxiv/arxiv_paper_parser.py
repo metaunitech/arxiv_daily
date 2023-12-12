@@ -285,8 +285,6 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
 
     def generate_paper_xmind(self, paper_instance: Paper, workbook=None, if_save_workbook=False, field=None,
                              additional_node=None, batch_path=None):
-        if not batch_path:
-            batch_path = Path(__file__).parent
         xmind_name = paper_instance.title
         if not workbook:
             logger.warning(f"New xmind file path: {xmind_name}.xmind")
