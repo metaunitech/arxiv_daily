@@ -8,9 +8,9 @@ CONFIG_PATH = Path(__file__).parent / 'configs' / 'configs.yaml'
 
 
 def main():
-    arxiv_flow = ArxivFlow(CONFIG_PATH)
-    zhihu_flow = ZhihuFlow(CONFIG_PATH)
-    arxiv_flow.default_routine(zhihu_instance=zhihu_flow)
+   # arxiv_flow = ArxivFlow(CONFIG_PATH)
+   # zhihu_flow = ZhihuFlow(CONFIG_PATH)
+   # arxiv_flow.default_routine(zhihu_instance=zhihu_flow)
 
     while 1:
         current_datetime = datetime.now()

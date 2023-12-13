@@ -1,3 +1,5 @@
+import traceback
+
 from modules.models import Paper
 from modules.models import XmindNodeList, PaperKeypoints
 from langchain.output_parsers import PydanticOutputParser
@@ -340,12 +342,16 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
         # APPEND IMAGES:
         try:
             section_names = paper_instance.get_section_titles()
-        except:
+        except Exception as e:
+            logger.error(str(e))
+            logger.debug(traceback.format_exc())
             section_names = []
         try:
             img_dict = paper_instance.get_section_imagedict_jvm()
-        except:
+        except Exception as e:
             img_dict = {}
+            logger.error(str(e))
+            logger.debug(traceback.format_exc())
         if section_names:
             for name in section_names[:-1]:
                 img_ls = img_dict.get(name)[::-1]
@@ -380,8 +386,8 @@ if __name__ == "__main__":
     from pathlib import Path
     from modules import RawDataStorage
     db_config = None
-    llm_config = Path(r"W:\Personal_Project\metaunitech\arxiv_daily\configs\llm_configs.yaml")
-    test_paper_path = r"W:\Personal_Project\metaunitech\arxiv_daily\demo2.pdf"
+    llm_config = Path(r"W:\arxiv_daily\configs\llm_configs.yaml")
+    test_paper_path = r"J:\Arxiv\paper_raw\Spatial-Temporal Knowledge-Embedded Transformer for Video Scene Graph Generation.pdf"
     test_paper_path2 = r"W:\Personal_Project\metaunitech\arxiv_daily\modules\paper_raw\2023-10-28\Can large language models replace humans in the systematic review process_ Evaluating GPT-4's efficacy in screening and extracting data from peer-reviewed and grey literature in multiple languages.pdf"
     from llm_utils import ChatModelLangchain
 

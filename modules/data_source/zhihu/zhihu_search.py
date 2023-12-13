@@ -7,6 +7,8 @@ from modules.rpa_utils.general_utils import DEFAULT_CHROMEDRIVER_PATH, DEFAULT_C
 from modules.rpa_utils.general_utils import click_btn, key_in_input, if_flag_element_exists, GLOBAL_TIMEWAIT, md5_hash
 from loguru import logger
 from pathlib import Path
+
+from selenium.webdriver.common.keys import Keys
 import json
 
 
@@ -69,8 +71,14 @@ class ZhihuSearch:
 
     def search(self, keyword, strict=True, timeout=300):
         logger.info("Start to search.")
+        self.driver.get(self.__endpoint)
         key_in_input(self.driver, 'Input', keyin_value=keyword, target_attribute='@class')
-        click_btn(self.driver, btn_class='button', btn_name='搜索', target_attribute='@aria-label')
+        try:
+            time.sleep(2)
+            click_btn(self.driver, btn_class='button', btn_name='搜索', target_attribute='@aria-label')
+        except:
+            ele = self.driver.find_elements_by_xpath("//*[contains(@class, 'Input')]")
+            ele.send_keys(Keys.ENTER)
         start_ts = time.time()
         while 1:
             logger.info("Starts to scroll down.")

@@ -57,6 +57,6 @@ class ChatModelLangchain:
 
 
 if __name__ == "__main__":
-    instance = ChatModelLangchain(Path(r"J:\Miscellaneous\NLP\universal_nlp_task_server\configs\llm_configs.yaml"))
+    instance = ChatModelLangchain(Path(r"W:\arxiv_daily\configs\llm_configs.yaml"))
     model = instance.generate_llm_model('Zhipu', 'gpt-35-turbo')
     print("HERE")
