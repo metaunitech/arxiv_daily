@@ -31,7 +31,8 @@ class ArxivFlow:
                                     storage_path=storage_path_base)
 
     @staticmethod
-    def assemble_query_args(startTS: datetime, endTS: datetime, query_arg_option=None, queries=None):
+    def assemble_query_args(startTS=None, endTS=None, query_arg_option=None, queries=None, id_list=None,
+                            bulk_description=None, field=None):
         if queries:
             query_args = queries
         elif query_arg_option:
@@ -40,9 +41,20 @@ class ArxivFlow:
                 raise Exception(
                     f"Query option: {query_arg_option} is not supported. Please add it to config file or provide improvised queries.")
         else:
-            raise Exception("Either query_arg_option or queries should be provided.")
-        query_args.update({'field': query_arg_option})
-        query_args.update({"updated_time_range": [startTS, endTS]})
+            query_args = {}
+            # raise Exception("Either query_arg_option or queries should be provided.")
+        if query_arg_option:
+            query_args.update({'field': query_arg_option})
+        elif field:
+            query_args.update({'field': field})
+
+        if startTS and endTS:
+            query_args.update({"updated_time_range": [startTS, endTS]})
+        if id_list:
+            query_args.update({"id_list": id_list,
+                               "if_return_download": True})
+        if bulk_description:
+            query_args.update({'bulk_description': bulk_description})
         return query_args
 
     @staticmethod
@@ -80,10 +92,44 @@ class ArxivFlow:
 
             logger.success(f"{str(args)} downloaded to {workbook_path}")
 
-    def daily_routine(self):
-        all_queries = CONFIG_DATA.get('')
-        pass
-        # TODO
+    def diy_routine(self, query_args_option=None, time_interval_str=None, time_duration=None, id_list=None,
+                    queries=None, field=None, zhihu_instance=None, bulk_description=None):
+        if query_args_option:
+            diy_field = query_args_option
+
+        elif field:
+            diy_field = field
+
+        else:
+            diy_field = 'UNKNOWN'
+
+        assert diy_field, 'Field of batch is not provided.'
+
+        if time_interval_str:
+            startTS, endTS = self.get_time_duration(time_interval_str)
+
+        elif time_duration:
+            startTS, endTS = tuple(time_duration)
+        else:
+            startTS, endTS = (None, None)
+
+        # assert startTS, 'StartTS is not provided'
+        # assert endTS, 'EndTS is not provided'
+
+        args = self.assemble_query_args(startTS=startTS,
+                                        endTS=endTS,
+                                        query_arg_option=query_args_option,
+                                        queries=queries,
+                                        id_list=id_list,
+                                        bulk_description=bulk_description,
+                                        field=diy_field)
+
+        logger.debug(args)
+        download_history_path = self.paper_retriever(**args)
+        workbook_path = self.paper_analyzer(download_history_path=download_history_path,
+                                            zhihu_instance=zhihu_instance)
+
+        logger.success(f"{str(args)} downloaded to {workbook_path}")
 
 
 if __name__ == "__main__":

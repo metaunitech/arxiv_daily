@@ -206,25 +206,44 @@ class PaperRetriever:
     #         json.dump(task_description_dict, f, indent=4, ensure_ascii=False)
     #     return output_path
 
-    def download_by_arxiv_id(self, id_list):
+    def download_by_arxiv_id(self, id_list, if_return_download=False, field=None, bulk_description=None,
+                             updated_time_range=None,
+                             **kwargs):
         res = arxiv.Search(id_list=id_list)
         result_instance = res.results()
         download_res = {}
+        download_history_dict = {}
         for res_ins in result_instance:
             downloaded_path = self.download(res_ins)
             download_res[res_ins.entry_id.split('/')[-1]] = [downloaded_path, res_ins]
+            entry_dict = res_ins.__dict__
+            info_dict = {i: entry_dict[i] for i in entry_dict.keys() if i[0] != '_'}
+            download_history_dict[res_ins.entry_id] = {'downloaded_pdf_path': downloaded_path,
+                                                       'info': str(info_dict)}
+        task_description_dict = {}
+        task_description_dict.update({'field': field,
+                                      'description': bulk_description,
+                                      'updated_time_range': [str(i) for i in
+                                                             updated_time_range] if updated_time_range else None})
+        task_description_dict.update({'download_history': download_history_dict})
+        logger.success(f'Retrieved {len(download_history_dict.keys())} entries.')
+        if if_return_download:
+            output_path = self.__raw_paper_storage_daily_path / f'download_history.json'
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(task_description_dict, f, indent=4, ensure_ascii=False)
+            return output_path
         return download_res
 
-    def main(self, summary_regex=None,
-             title_regex=None,
-             journal_ref_regex=None,
-             target_subject_category=None,
-             target_primary_category=None,
-             updated_time_range=None,
-             diy_query_str=None,
-             bulk_description=None,
-             field=None,
-             **kwargs):
+    def download_by_quries(self, summary_regex=None,
+                           title_regex=None,
+                           journal_ref_regex=None,
+                           target_subject_category=None,
+                           target_primary_category=None,
+                           updated_time_range=None,
+                           diy_query_str=None,
+                           bulk_description=None,
+                           field=None,
+                           **kwargs):
 
         download_history_dict = {}
 
@@ -293,7 +312,11 @@ class PaperRetriever:
                                                f'batch_{str(int(time.time()))}')
         os.makedirs(self.__raw_paper_storage_daily_path, exist_ok=True)
 
-        return self.main(*args, **kwargs)
+        if kwargs.get("id_list"):
+            return self.download_by_arxiv_id(*args, **kwargs)
+
+        else:
+            return self.download_by_quries(*args, **kwargs)
 
 
 if __name__ == "__main__":

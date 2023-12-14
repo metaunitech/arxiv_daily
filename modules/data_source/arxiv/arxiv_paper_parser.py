@@ -13,6 +13,8 @@ from modules.pdf_extract import get_objpixmap
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from XmindCopilot import XmindCopilot
+
+
 # from XmindCopilot.XmindCopilot.core.topic import TopicElement
 # from XmindCopilot.XmindCopilot.search import topic_search
 # from XmindCopilot.XmindCopilot.file_shrink import xmind_shrink
@@ -171,7 +173,8 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
         if self.__db_instance:
             chat_method_text = self.__db_instance.get_step2_summary(paper_instance.url)
             if not chat_method_text:
-                chat_method_text = self._step2_summarize_method(paper_instance, field, chat_summary_text=chat_summary_text)
+                chat_method_text = self._step2_summarize_method(paper_instance, field,
+                                                                chat_summary_text=chat_summary_text)
                 self.__db_instance.upload_step2_method_summary(paper_instance.url, chat_method_text)
             else:
                 logger.warning("Chat_method_text already exist.")
@@ -319,10 +322,12 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
             keypoints = []
 
         main_result = root_topic.addSubTopic()
-        reformatted_summary = ""
-        for line in analysis_result.split('\n'):
-            reformatted_summary += self.reformat_string(line, 100)
-            reformatted_summary += '\n'
+        # reformatted_summary = ""
+        # for line in analysis_result.split('\n'):
+        #     reformatted_summary += self.reformat_string(line, 100)
+        #     reformatted_summary += '\n'
+
+        reformatted_summary = analysis_result
 
         main_result.setTitle(reformatted_summary)
         main_result.addMarker(MarkerId.starRed)
@@ -354,8 +359,9 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
             logger.debug(traceback.format_exc())
         if section_names:
             for name in section_names[:-1]:
-                img_ls = img_dict.get(name)[::-1]
+                img_ls = img_dict.get(name)
                 if img_ls:
+                    img_ls = img_ls[::-1]
                     section_node = root_topic.addSubTopic()
                     section_node.setTitle(name)
                     for img in img_ls:
@@ -377,6 +383,7 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
                         if len(img) == 4:
                             topic.setTitle(img[3])
                             topic.setTitleSvgWidth()
+        paper_instance.clean_up()
         if if_save_workbook:
             XmindCopilot.save(workbook=workbook)
         return sheet, keypoints
@@ -385,6 +392,7 @@ This is the <summary> and <conclusion> part of an English literature, where <sum
 if __name__ == "__main__":
     from pathlib import Path
     from modules import RawDataStorage
+
     db_config = None
     llm_config = Path(r"W:\arxiv_daily\configs\llm_configs.yaml")
     test_paper_path = r"J:\Arxiv\paper_raw\Spatial-Temporal Knowledge-Embedded Transformer for Video Scene Graph Generation.pdf"

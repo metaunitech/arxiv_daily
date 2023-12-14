@@ -29,11 +29,15 @@ class Paper:
         self.first_image = ''
         self.PDFF2data = parsePDF_PDFFigures2(path)
 
+    def clean_up(self):
+        logger.info("PDF CLOSED")
+        self.pdf.close()
+
     def parse_pdf(self):
         self.pdf = fitz.open(self.path)  # pdf文档
         if self.pdf.page_count == 0:
             logger.error(f"File is broken: {self.title}")
-            self.pdf.close()
+            self.clean_up()
             raise Exception("File broken.")
         self.text_list = [page.get_text() for page in self.pdf]
         self.all_text = ' '.join(self.text_list)
@@ -43,7 +47,7 @@ class Paper:
         self.section_text_dict.update({"title": self.title})
         self.section_text_dict.update({"paper_info": self.get_paper_info()})
         self.reference_list = self.get_reference()
-        self.pdf.close()
+
 
     def get_paper_info(self):
         first_page_text = self.pdf[self.title_page].get_text()
@@ -63,6 +67,7 @@ class Paper:
         """
         import time
         # open file
+        self.pdf = fitz.open(self.path)  # pdf文档
         max_size = 0
         with fitz.Document(self.path) as my_pdf_file:
             # 遍历所有页面
@@ -110,6 +115,8 @@ class Paper:
             image = image.resize(newsize)
             image.save(open(im_path, "wb"))
             output[image_name] = image_path
+
+
         return output
 
     # 定义一个函数，根据字体的大小，识别每个章节名称，并返回一个列表
@@ -324,78 +331,79 @@ class Paper:
 
     ### MODIFIED FROM CHATPAPER2XMIND
 
-    def get_section_equationdict(self, legacy=False):
-        """
-        Get equation dict of each section
+    # def get_section_equationdict(self, legacy=False):
+    #     """
+    #     Get equation dict of each section
+    #
+    #     :param legacy: True for legacy equation extraction method
+    #     :return: Dict of section titles with tuple item list
+    #     (equation_text_pos, page_number, equation_bbox)
+    #     """
+    #     eqa_ls = []
+    #     for i in range(len(self.pdf)):
+    #         page = self.pdf[i]
+    #         if legacy:
+    #             eq_box = get_eqbox(page)
+    #         else:
+    #             eq_box = getEqRect(page)
+    #         if eq_box:
+    #             for box in eq_box:
+    #                 eqa_ls.append((get_box_textpos(page, box, self.all_text),
+    #                                i, box))
+    #     section_title = self.get_section_titles()
+    #     pos_dict = self.get_section_textposdict()
+    #     section_dict = {}
+    #     for title in section_title[:-1]:
+    #         section_dict[title] = []
+    #         for eqa in eqa_ls:
+    #             if eqa[0] > pos_dict[title][0] and eqa[0] <= pos_dict[title][1]:
+    #                 section_dict[title].append(eqa)
+    #             elif section_dict[title]:
+    #                 break
+    #     return section_dict
+    #
+    # def gen_image(self, snap_with_caption, verbose=False):
+    #     """
+    #     Generate image for each section in xmind (Figure/Table)
+    #     """
+    #     section_names = self.paper.get_section_titles()
+    #     img_dict = self.paper.get_section_imagedict(
+    #         snap_with_caption=snap_with_caption, verbose=verbose)
+    #     for name in section_names[:-1]:
+    #         img_ls = img_dict.get(name)
+    #         if img_ls:
+    #             for img in img_ls:
+    #                 img_tempdir = get_objpixmap(self.paper.pdf, img)
+    #                 topic = topic_search(self, name).addSubTopicbyImage(
+    #                     img_tempdir, img_ls.index(img))
+    #                 # FIXME: This is a temporary solution for compatibility
+    #                 if len(img) == 4:
+    #                     topic.setTitle(img[3])
+    #                     topic.setTitleSvgWidth()
 
-        :param legacy: True for legacy equation extraction method
-        :return: Dict of section titles with tuple item list
-        (equation_text_pos, page_number, equation_bbox)
-        """
-        eqa_ls = []
-        for i in range(len(self.pdf)):
-            page = self.pdf[i]
-            if legacy:
-                eq_box = get_eqbox(page)
-            else:
-                eq_box = getEqRect(page)
-            if eq_box:
-                for box in eq_box:
-                    eqa_ls.append((get_box_textpos(page, box, self.all_text),
-                                   i, box))
-        section_title = self.get_section_titles()
-        pos_dict = self.get_section_textposdict()
-        section_dict = {}
-        for title in section_title[:-1]:
-            section_dict[title] = []
-            for eqa in eqa_ls:
-                if eqa[0] > pos_dict[title][0] and eqa[0] <= pos_dict[title][1]:
-                    section_dict[title].append(eqa)
-                elif section_dict[title]:
-                    break
-        return section_dict
-
-    def gen_image(self, snap_with_caption, verbose=False):
-        """
-        Generate image for each section in xmind (Figure/Table)
-        """
-        section_names = self.paper.get_section_titles()
-        img_dict = self.paper.get_section_imagedict(
-            snap_with_caption=snap_with_caption, verbose=verbose)
-        for name in section_names[:-1]:
-            img_ls = img_dict.get(name)
-            if img_ls:
-                for img in img_ls:
-                    img_tempdir = get_objpixmap(self.paper.pdf, img)
-                    topic = topic_search(self, name).addSubTopicbyImage(
-                        img_tempdir, img_ls.index(img))
-                    # FIXME: This is a temporary solution for compatibility
-                    if len(img) == 4:
-                        topic.setTitle(img[3])
-                        topic.setTitleSvgWidth()
-
-    def gen_equation(self, legacy=True):
-        """
-        Generate equation for each section in xmind
-
-        :param legacy: if True, use legacy method to extract\
-            equation, else use new method.
-        `NOTE` It seems that legacy method is more accurate.
-        """
-        section_names = self.paper.get_section_titles()
-        eqa_dict = self.paper.get_section_equationdict(legacy=legacy)
-        for name in section_names[:-1]:
-            eqa_ls = eqa_dict.get(name)
-            if eqa_ls:
-                for eqa in eqa_ls:
-                    eqa_tempdir = get_objpixmap(self.paper.pdf, eqa)
-                    topic_search(self, name).addSubTopicbyImage(
-                        eqa_tempdir, eqa_ls.index(eqa))
+    # def gen_equation(self, legacy=True):
+    #     """
+    #     Generate equation for each section in xmind
+    #
+    #     :param legacy: if True, use legacy method to extract\
+    #         equation, else use new method.
+    #     `NOTE` It seems that legacy method is more accurate.
+    #     """
+    #     section_names = self.paper.get_section_titles()
+    #     eqa_dict = self.paper.get_section_equationdict(legacy=legacy)
+    #     for name in section_names[:-1]:
+    #         eqa_ls = eqa_dict.get(name)
+    #         if eqa_ls:
+    #             for eqa in eqa_ls:
+    #                 eqa_tempdir = get_objpixmap(self.paper.pdf, eqa)
+    #                 topic_search(self, name).addSubTopicbyImage(
+    #                     eqa_tempdir, eqa_ls.index(eqa))
 
         # Section Dict Extract
 
     def get_section_titles(self, withlevel=False, verbose=False):
         section_title = []
+        self.pdf = fitz.open(self.path)
         # ref_break_flag = False
         level1_matchstr = SECTION_TITLE_MATCHSTR[0]
         level2_matchstr = SECTION_TITLE_MATCHSTR[1]
@@ -452,52 +460,52 @@ class Paper:
                 print(f"Warning: {title} not found in all_text.")
         return section_dict
 
-    def get_section_textdict(self, remove_title=False):
-        """
-        Get section text dict of the paper.
-        :return: Dict of section titles with text content
-        FIXME: This will not get Reference content
-        """
-        section_title = self.get_section_titles(withlevel=False)
-        pos_dict = self.get_section_textposdict()
-        section_dict = {}
-        for title in section_title[:-1]:
-            if not remove_title:
-                section_dict[title] = self.all_text[pos_dict[title][0]:pos_dict[title][1]]
-            else:
-                section_dict[title] = self.all_text[pos_dict[title][0] + len(title):pos_dict[title][1]]
-        return section_dict
+    # def get_section_textdict(self, remove_title=False):
+    #     """
+    #     Get section text dict of the paper.
+    #     :return: Dict of section titles with text content
+    #     FIXME: This will not get Reference content
+    #     """
+    #     section_title = self.get_section_titles(withlevel=False)
+    #     pos_dict = self.get_section_textposdict()
+    #     section_dict = {}
+    #     for title in section_title[:-1]:
+    #         if not remove_title:
+    #             section_dict[title] = self.all_text[pos_dict[title][0]:pos_dict[title][1]]
+    #         else:
+    #             section_dict[title] = self.all_text[pos_dict[title][0] + len(title):pos_dict[title][1]]
+    #     return section_dict
 
-    def get_section_equationdict(self, legacy=False):
-        """
-        Get equation dict of each section
-
-        :param legacy: True for legacy equation extraction method
-        :return: Dict of section titles with tuple item list
-        (equation_text_pos, page_number, equation_bbox)
-        """
-        eqa_ls = []
-        for i in range(len(self.pdf)):
-            page = self.pdf[i]
-            if legacy:
-                eq_box = get_eqbox(page)
-            else:
-                eq_box = getEqRect(page)
-            if eq_box:
-                for box in eq_box:
-                    eqa_ls.append((get_box_textpos(page, box, self.all_text),
-                                   i, box))
-        section_title = self.get_section_titles()
-        pos_dict = self.get_section_textposdict()
-        section_dict = {}
-        for title in section_title[:-1]:
-            section_dict[title] = []
-            for eqa in eqa_ls:
-                if eqa[0] > pos_dict[title][0] and eqa[0] <= pos_dict[title][1]:
-                    section_dict[title].append(eqa)
-                elif section_dict[title]:
-                    break
-        return section_dict
+    # def get_section_equationdict(self, legacy=False):
+    #     """
+    #     Get equation dict of each section
+    #
+    #     :param legacy: True for legacy equation extraction method
+    #     :return: Dict of section titles with tuple item list
+    #     (equation_text_pos, page_number, equation_bbox)
+    #     """
+    #     eqa_ls = []
+    #     for i in range(len(self.pdf)):
+    #         page = self.pdf[i]
+    #         if legacy:
+    #             eq_box = get_eqbox(page)
+    #         else:
+    #             eq_box = getEqRect(page)
+    #         if eq_box:
+    #             for box in eq_box:
+    #                 eqa_ls.append((get_box_textpos(page, box, self.all_text),
+    #                                i, box))
+    #     section_title = self.get_section_titles()
+    #     pos_dict = self.get_section_textposdict()
+    #     section_dict = {}
+    #     for title in section_title[:-1]:
+    #         section_dict[title] = []
+    #         for eqa in eqa_ls:
+    #             if eqa[0] > pos_dict[title][0] and eqa[0] <= pos_dict[title][1]:
+    #                 section_dict[title].append(eqa)
+    #             elif section_dict[title]:
+    #                 break
+    #     return section_dict
 
     def get_section_imagedict_default(self, verbose=False, snap_with_caption=True):
         """
@@ -538,6 +546,7 @@ class Paper:
         :return: Dict of section titles with tuple item list
         (img_text_pos, page_number, img_bbox, img_caption)
         """
+        self.pdf = fitz.open(self.path)  # pdf文档
         img_ls = []
         for d in self.PDFF2data.get('figures', []):
             if snap_with_caption:

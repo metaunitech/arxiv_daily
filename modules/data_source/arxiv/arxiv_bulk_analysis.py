@@ -92,14 +92,23 @@ Output:
         map_prompt = PromptTemplate.from_template(map_template)
         map_chain = LLMChain(llm=self.llm_engine, prompt=map_prompt)
 
-        reduce_template = """<s>[INST] The following is set of summaries for research paper.:
-            {doc_summaries}
-            ---
-            Based on the above transcript and distill it into a final, consolidated summary of the main points as accurate as possible and do not make up if you do not know.
-            Construct it as a well organized summary of the main points list them one by one.
-            
-            In the final sentence, give a whole summary for all in one paragraph.
-            Answer:  [/INST]"""
+        # reduce_template = """<s>[INST] The following is set of summaries for research paper.:
+        #     {doc_summaries}
+        #     ---
+        #     Based on the above transcript and distill it into a final, consolidated summary of the main points as accurate as possible and do not make up if you do not know.
+        #     Construct it as a well organized summary of the main points list them one by one.
+        #
+        #     In the final sentence, give a whole summary for all in one paragraph.
+        #     Answer:  [/INST]"""
+
+        reduce_template = """<s>[INST] 下面我会给你一系列论文的总结.:
+                    {doc_summaries}
+                    ---
+                    基于上面给到的总结，你需要将他们合并成对于所有论文关键点的总结。
+                    你需要尽可能地精确，不要增加你无法从论文总结中得到的信息，不要杜撰。
+                    根据所有论文列出 1）这些论文的关注点 2）这些论文的领域，用一段话总结当前批次所有论文的重点。
+
+                    Answer:  [/INST]"""
 
         reduce_prompt = PromptTemplate.from_template(reduce_template)
         reduce_chain = LLMChain(llm=self.llm_engine, prompt=reduce_prompt)
@@ -205,7 +214,7 @@ Output:
         return paper_description
 
     def main(self, download_history_path: Path, zhihu_instance=None):
-        with open(download_history_path, 'r') as f:
+        with open(download_history_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         paper_data = data.get('download_history', {})
         bulk_description_data = {i: data[i] for i in data.keys() if i != 'download_history'}
@@ -230,6 +239,8 @@ Output:
                 logger.error(e)
                 logger.debug(traceback.format_exc())
                 continue
+
+        # REFINE SUMMARY
         summary = None
         if papers:
             try:

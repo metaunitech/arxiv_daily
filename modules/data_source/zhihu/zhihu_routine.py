@@ -28,7 +28,7 @@ class ZhihuFlow:
         self.if_headless = bool(configs.get('runtime_settings', {}).get('if_headless'))
         self.login_engine = ZhihuLogin(if_headless=self.if_headless)
         self.search_engine = None
-        self.refresh_login_status(self.__account_name, self.__password, self.if_headless)
+        # self.refresh_login_status(self.__account_name, self.__password, self.if_headless)
 
     def refresh_login_status(self, account_name, password, if_headless=None):
         if not if_headless:
