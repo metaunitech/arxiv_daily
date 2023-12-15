@@ -1,5 +1,6 @@
 import os
 import traceback
+import zipfile
 from typing import List
 from modules.models import Paper
 from langchain.schema import Document
@@ -28,7 +29,8 @@ from XmindCopilot.XmindCopilot.file_shrink import xmind_shrink
 
 
 class BulkAnalysis:
-    def __init__(self, llm_engine, db_instance, paper_parser_instance: PaperParser, paper_retriever_instance: PaperRetriever):
+    def __init__(self, llm_engine, db_instance, paper_parser_instance: PaperParser,
+                 paper_retriever_instance: PaperRetriever):
         self.llm_engine = llm_engine
         self.__paper_parser = paper_parser_instance
         self.__paper_retriever = paper_retriever_instance
@@ -263,11 +265,25 @@ Output:
                                                   field=bulk_description_data.get("field", None),
                                                   zhihu_instance=zhihu_instance)
         logger.info(f"Starts to shrink workbook: {workbook_path}")
-        try:
-            xmind_shrink(workbook_path)
-        except:
-            pass
+        for quality in range(10, 0, -1):
+            if os.path.getsize(workbook_path) < 50 * 1024 * 1024:
+                break
+            try:
+                logger.warning(f"Currently: {workbook_path} exceed max size. <{os.path.getsize(workbook_path)}B>")
+                xmind_shrink(workbook_path)
+            except Exception as e:
+                logger.warning(str(e))
+        if os.path.getsize(workbook_path) > 50 * 1024 * 1024:
+            logger.warning("Compressed file still exceed 50MB. Will zip it.")
+            zip_path = workbook_path.parent / workbook_path.stem + '.zip'
+            zip_file = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
 
+            # 将要压缩的文件添加到zip文件中
+            zip_file.write(zip_path)
+
+            # 关闭zip文件
+            zip_file.close()
+            return zip_path
         return workbook_path
 
     def refine_main(self, download_history_path: Path):
