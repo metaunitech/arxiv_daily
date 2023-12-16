@@ -9,8 +9,12 @@ import time
 from itertools import takewhile
 import json
 import tenacity
-from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
+from func_timeout import func_set_timeout
+import logging
+import fitz
+logging.basicConfig(level=logging.DEBUG)
+from concurrent.futures import ThreadPoolExecutor
 import threading
 
 QUERY_ABBR_MAPPING = {'title': 'ti',
@@ -92,14 +96,20 @@ class PaperRetriever:
                         return False
             return True
 
+        client = arxiv.Client(
+            page_size=50,
+            delay_seconds=1.0,
+            num_retries=5
+        )
+
         if updated_time_range:
             sort_by = arxiv.SortCriterion.LastUpdatedDate
             search_instance = arxiv.Search(query=query_str, sort_by=sort_by, sort_order=arxiv.SortOrder.Descending)
-            return filter(should_pick, takewhile(within_time_range, search_instance.results()))
+            return filter(should_pick, takewhile(within_time_range, client.results(search_instance)))
             # return takewhile(within_time_range, search_instance.results())
         else:
             search_instance = arxiv.Search(query=query_str)
-            return filter(should_pick, search_instance.results())
+            return filter(should_pick, client.results(search_instance))
 
     @staticmethod
     def sanitize_filename(filename):
@@ -108,24 +118,36 @@ class PaperRetriever:
         return sanitized_filename
 
     @tenacity.retry(wait=tenacity.wait_exponential(multiplier=1, min=4, max=10),
-                    stop=tenacity.stop_after_attempt(5),
+                    stop=tenacity.stop_after_attempt(2),
                     reraise=True)
     def download(self, result_instance: arxiv.Result):
-        logger.info(f"Try to download {result_instance}")
-        downloaded_name = self.sanitize_filename(result_instance.title)
-        target_downloaded_path = self.__raw_paper_storage_path / f'{downloaded_name}.pdf'
-        if target_downloaded_path.exists():
-            logger.warning(f"Already downloaded at {target_downloaded_path}")
-            return str(target_downloaded_path.absolute())
-        downloaded_path = result_instance.download_pdf(dirpath=str(self.__raw_paper_storage_path),
-                                                       filename=downloaded_name + '.pdf')
-        logger.success(f"Downloaded at {downloaded_path}")
-        self.db_instance.upload_paper_raw_data(entry_id=result_instance.entry_id,
-                                               title=result_instance.title,
-                                               summary=result_instance.summary,
-                                               primary_category=result_instance.primary_category,
-                                               publish_time=result_instance.published)
-        return downloaded_path
+        @func_set_timeout(600)
+        def _download():
+            logger.info(f"Try to download {result_instance}")
+            downloaded_name = self.sanitize_filename(result_instance.title)
+            target_downloaded_path = self.__raw_paper_storage_path / f'{downloaded_name}.pdf'
+            if target_downloaded_path.exists():
+                _pdf = fitz.open(target_downloaded_path)
+                if _pdf.page_count >0 :
+                    logger.warning(f"Already downloaded at {target_downloaded_path}")
+                    _pdf.close()
+                    return str(target_downloaded_path.absolute())
+                _pdf.close()
+            downloaded_path = result_instance.download_pdf(dirpath=str(self.__raw_paper_storage_path),
+                                                           filename=downloaded_name + '.pdf')
+            logger.success(f"Downloaded at {downloaded_path}")
+            self.db_instance.upload_paper_raw_data(entry_id=result_instance.entry_id,
+                                                   title=result_instance.title,
+                                                   summary=result_instance.summary,
+                                                   primary_category=result_instance.primary_category,
+                                                   publish_time=result_instance.published)
+            return downloaded_path
+
+        try:
+            _download()
+        except:
+            logger.error(f"Download timeout. {result_instance.title}")
+            raise Exception("Download timeout. ")
 
     # def main(self, summary_regex=None,
     #          title_regex=None,
@@ -210,7 +232,12 @@ class PaperRetriever:
                              updated_time_range=None,
                              **kwargs):
         res = arxiv.Search(id_list=id_list)
-        result_instance = res.results()
+        client = arxiv.Client(
+            page_size=50,
+            delay_seconds=1.0,
+            num_retries=5
+        )
+        result_instance = client.results(res)
         download_res = {}
         download_history_dict = {}
         for res_ins in result_instance:
@@ -269,8 +296,8 @@ class PaperRetriever:
             for task in task_gen:
                 logger.info(f'{task} imported')
                 task_list.append(task)
-        except:
-            pass
+        except Exception as e:
+            logger.warning(str(e))
 
         # 获取总的任务数量
         total_tasks = len(task_list)
