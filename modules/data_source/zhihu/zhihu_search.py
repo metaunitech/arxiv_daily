@@ -69,7 +69,15 @@ class ZhihuSearch:
             logger.error("Not yet logged in. Cookie expired. You need to login again")
             return False
 
-    def search(self, keyword, strict=True, timeout=300):
+    def retrieve_raw_content_from_url(self, url):
+        self.driver.get(url)
+        return self.driver.page_source
+
+    def parse_arxiv_papers_in_page_content(self, raw_page_content: str):
+        pass
+
+    def search(self, keyword, strict=True, with_content=False, timeout=300, max_count=None,
+               sorted_by_created_time=True):
         logger.info("Start to search.")
         self.driver.get(self.__endpoint)
         key_in_input(self.driver, 'Input', keyin_value=keyword, target_attribute='@class')
@@ -79,6 +87,9 @@ class ZhihuSearch:
         except:
             ele = self.driver.find_elements_by_xpath("//*[contains(@class, 'Input')]")
             ele.send_keys(Keys.ENTER)
+        if sorted_by_created_time:
+            logger.warning("Sorted by created time.")
+            self.driver.get(self.driver.current_url + '&sort=created_time')
         start_ts = time.time()
         while 1:
             logger.info("Starts to scroll down.")
@@ -94,6 +105,12 @@ class ZhihuSearch:
             is_end = self.driver.find_elements_by_xpath("//*[contains(text(), '没有更多了')]")
             if is_end:
                 logger.warning("Already hit end.")
+                break
+            _cur_results = self.driver.find_elements_by_xpath("//div[@class='Card SearchResult-Card']")
+            if strict:
+                _cur_results = [e for e in _cur_results if keyword in e.text]
+            if max_count and len(_cur_results) >= max_count:
+                logger.warning("Hit max result count. Break")
                 break
             if time.time() - start_ts >= timeout:
                 raise SearchException.RuntimeException(f"Fail to login after {timeout} seconds.")

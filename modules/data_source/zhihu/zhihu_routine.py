@@ -37,7 +37,9 @@ class ZhihuFlow:
         self.search_engine = ZhihuSearch(driver_instance=driver, if_headless=if_headless)
         logger.success('Login status refreshed.')
 
-    def search_keyword(self, keyword):
+    def search_keyword(self, keyword, with_content=False):
+        if self.search_engine is None:
+            self.refresh_login_status(self.__account_name, self.__password, self.if_headless)
         try:
             res = self.search_engine.search(keyword)
         except:

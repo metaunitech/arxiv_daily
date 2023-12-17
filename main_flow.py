@@ -22,7 +22,7 @@ def selected_arxiv_ids(arxiv_ids):
 
 def selected_topics(topic_name):
     zhihu_flow = ZhihuFlow(CONFIG_PATH)
-    zhihu_flow.refresh_login_status()
+    zhihu_flow.search_keyword(topic_name)
 
 
 def main():
@@ -45,4 +45,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    selected_topics('大模型')
