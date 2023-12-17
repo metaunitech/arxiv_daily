@@ -27,7 +27,9 @@ class Paper:
         self.roman_num = ["I", "II", 'III', "IV", "V", "VI", "VII", "VIII", "IIX", "IX", "X"]
         self.digit_num = [str(d + 1) for d in range(10)]
         self.first_image = ''
+        self.pdf.close()
         self.PDFF2data = parsePDF_PDFFigures2(path)
+        self.pdf = fitz.open(self.path)
 
     def clean_up(self):
         logger.info("PDF CLOSED")

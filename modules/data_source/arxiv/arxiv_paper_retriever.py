@@ -13,6 +13,7 @@ from tqdm import tqdm
 from func_timeout import func_set_timeout
 import logging
 import fitz
+
 logging.basicConfig(level=logging.DEBUG)
 from concurrent.futures import ThreadPoolExecutor
 import threading
@@ -128,11 +129,12 @@ class PaperRetriever:
             target_downloaded_path = self.__raw_paper_storage_path / f'{downloaded_name}.pdf'
             if target_downloaded_path.exists():
                 _pdf = fitz.open(target_downloaded_path)
-                if _pdf.page_count >0 :
-                    logger.warning(f"Already downloaded at {target_downloaded_path}")
+                if _pdf.page_count > 0:
+                    logger.warning(f"Already downloaded at {target_downloaded_path}. Page count: {_pdf.page_count}")
                     _pdf.close()
                     return str(target_downloaded_path.absolute())
                 _pdf.close()
+
             downloaded_path = result_instance.download_pdf(dirpath=str(self.__raw_paper_storage_path),
                                                            filename=downloaded_name + '.pdf')
             logger.success(f"Downloaded at {downloaded_path}")
@@ -144,7 +146,7 @@ class PaperRetriever:
             return downloaded_path
 
         try:
-            _download()
+            return _download()
         except:
             logger.error(f"Download timeout. {result_instance.title}")
             raise Exception("Download timeout. ")

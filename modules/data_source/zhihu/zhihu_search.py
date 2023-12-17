@@ -108,3 +108,6 @@ class ZhihuSearch:
                        'name': e.find_element_by_xpath("//meta[@itemprop='name']").get_attribute('content'),
                        'content_raw': e.text} for e in all_results]
         return output
+
+    def extract_url_arxiv(self, url):
+        pass

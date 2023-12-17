@@ -13,6 +13,7 @@ def hello_world():
     "ef2b7f81fe3d89cb25103a856c50fd91"
     return "HERE"
 
+
 @app.route('/validate', methods=['GET'])
 def validate():
     signature = request.args.get("signature")
@@ -29,7 +30,6 @@ def validate():
         return request.args.get('echostr', 'HERE')
     else:
         return 'Invalid signature'
-
 
 
 if __name__ == '__main__':

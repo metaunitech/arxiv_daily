@@ -7,13 +7,31 @@ from datetime import datetime
 CONFIG_PATH = Path(__file__).parent / 'configs' / 'configs.yaml'
 
 
-def main():
+def daily_main():
     arxiv_flow = ArxivFlow(CONFIG_PATH)
     zhihu_flow = ZhihuFlow(CONFIG_PATH)
-
     arxiv_flow.default_routine(zhihu_instance=zhihu_flow)
-    # arxiv_flow.diy_routine(id_list=['2311.10813', '1911.04175', '2311.11797'], field='Agent_zhihu',
-    #                        zhihu_instance=None, bulk_description='知乎上关于Agent的论文')
+
+
+def selected_arxiv_ids(arxiv_ids):
+    arxiv_flow = ArxivFlow(CONFIG_PATH)
+    zhihu_flow = ZhihuFlow(CONFIG_PATH)
+    arxiv_flow.diy_routine(id_list=arxiv_ids, field='Agent_zhihu',
+                           zhihu_instance=zhihu_flow, bulk_description='知乎上关于Agent的论文')
+
+
+def selected_topics(topic_name):
+    zhihu_flow = ZhihuFlow(CONFIG_PATH)
+    zhihu_flow.refresh_login_status()
+
+
+def main():
+    # arxiv_flow = ArxivFlow(CONFIG_PATH)
+    # zhihu_flow = ZhihuFlow(CONFIG_PATH)
+    #
+    # arxiv_flow.default_routine(zhihu_instance=zhihu_flow)
+    # # arxiv_flow.diy_routine(id_list=['2311.10813', '1911.04175', '2311.11797'], field='Agent_zhihu',
+    # #                        zhihu_instance=None, bulk_description='知乎上关于Agent的论文')
 
     while 1:
         current_datetime = datetime.now()

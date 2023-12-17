@@ -50,5 +50,6 @@ class ZhihuFlow:
 
 if __name__ == "__main__":
     ins = ZhihuFlow(Path(r"W:\arxiv_daily\configs\configs.yaml"))
+    ins.refresh_login_status('18516770170', '833020fan')
     res = ins.search_keyword('2308.13418v1')
     print(res)
