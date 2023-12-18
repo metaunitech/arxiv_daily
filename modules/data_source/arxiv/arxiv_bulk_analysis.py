@@ -235,7 +235,6 @@ Output:
                     res = self.__paper_retriever.download_by_arxiv_id([i.split('/')[-1]])
                     title = res[i.split('/')[-1]][1].title
                     paper_ins = Paper(path=res[i.split('/')[-1]][0], url=i, title=title)
-                    continue
                 papers.append(paper_ins)
             except Exception as e:
                 logger.error(f'paper: {i}')
