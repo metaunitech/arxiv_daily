@@ -20,9 +20,17 @@ def selected_arxiv_ids(arxiv_ids):
                            zhihu_instance=zhihu_flow, bulk_description='知乎上关于Agent的论文')
 
 
-def selected_topics(topic_name):
+def selected_topics(topic_name, max_post_count=100):
+    arxiv_flow = ArxivFlow(CONFIG_PATH)
     zhihu_flow = ZhihuFlow(CONFIG_PATH)
-    zhihu_flow.search_keyword(topic_name)
+    arxiv_ids = zhihu_flow.search_topic_arxivs(topic_name, max_post_count=max_post_count)
+    logger.success(f"Retrieved {len(arxiv_ids)} papers for topic: {topic_name}")
+    logger.debug(arxiv_ids)
+    if not arxiv_ids:
+        logger.success("No related arxiv_ids retrieved.")
+        return
+    arxiv_flow.diy_routine(id_list=arxiv_ids, field=topic_name,
+                           zhihu_instance=zhihu_flow, bulk_description=f'知乎上关于{topic_name}的论文')
 
 
 def main():
@@ -46,4 +54,4 @@ def main():
 
 if __name__ == "__main__":
     # selected_topics('大模型')
-    main()
+    selected_topics('大模型', 50)

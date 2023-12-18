@@ -1,8 +1,11 @@
 import time
-
+import re
 import undetected_chromedriver as uc
 from selenium.webdriver.chrome.options import Options
-
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from modules.rpa_utils.general_utils import DEFAULT_CHROMEDRIVER_PATH, DEFAULT_CHROMEDRIVER_VERSION, ENDPOINTS
 from modules.rpa_utils.general_utils import click_btn, key_in_input, if_flag_element_exists, GLOBAL_TIMEWAIT, md5_hash
 from loguru import logger
@@ -73,11 +76,32 @@ class ZhihuSearch:
         self.driver.get(url)
         return self.driver.page_source
 
-    def parse_arxiv_papers_in_page_content(self, raw_page_content: str):
-        pass
+    @staticmethod
+    def parse_arxiv_papers_in_page_content(raw_page_content: str):
+        outs = re.findall(r'arxiv.org/\w+/(\d+\.\d{5}[v,V,0-1]*)', raw_page_content)
+        return list(set(outs))
+
+    def get_search_result_card_details(self, result_card_element: WebElement):
+        if not result_card_element.is_displayed():
+            logger.warning("Result card is not visible.")
+        self.driver.execute_script("arguments[0].scrollIntoView();", result_card_element)
+        try:
+            title_ele = WebDriverWait(result_card_element, GLOBAL_TIMEWAIT, 0.1).until(
+                EC.presence_of_element_located((By.XPATH, r".//*[@class='ContentItem-title']"))
+            )
+            title = title_ele.text
+            href = result_card_element.find_element_by_xpath(r".//*[@class='ContentItem-title']//a").get_attribute(
+                "href")
+        except:
+            logger.warning(f'{result_card_element.text} skipped')
+            return None
+        out = {'url': href,
+               'name': title,
+               'content_raw': result_card_element.text}
+        return out
 
     def search(self, keyword, strict=True, with_content=False, timeout=300, max_count=None,
-               sorted_by_created_time=True):
+               sorted_by_created_time=True, article_only=True):
         logger.info("Start to search.")
         self.driver.get(self.__endpoint)
         key_in_input(self.driver, 'Input', keyin_value=keyword, target_attribute='@class')
@@ -87,14 +111,23 @@ class ZhihuSearch:
         except:
             ele = self.driver.find_elements_by_xpath("//*[contains(@class, 'Input')]")
             ele.send_keys(Keys.ENTER)
+        modified_url = self.driver.current_url
         if sorted_by_created_time:
             logger.warning("Sorted by created time.")
-            self.driver.get(self.driver.current_url + '&sort=created_time')
+            modified_url += '&sort=created_time'
+            # self.driver.get(self.driver.current_url + '&sort=created_time')
+        if article_only:
+            logger.warning("Article only")
+            modified_url += '&vertical=article'
+            # self.driver.get(self.driver.current_url+'&vertical=article')
+        self.driver.get(modified_url)
+
         start_ts = time.time()
         while 1:
+            prev_content = self.driver.page_source
             logger.info("Starts to scroll down.")
             self.driver.execute_script("var q=document.documentElement.scrollTop=100000")
-            time.sleep(1)
+            time.sleep(5)
             current_cards = self.driver.find_elements_by_xpath("//div[@class='Card SearchResult-Card']")
             if not current_cards:
                 logger.debug("No more current card on page. Break")
@@ -103,6 +136,9 @@ class ZhihuSearch:
                 logger.warning("Keyword is not in last card. Break for strict mode")
                 break
             is_end = self.driver.find_elements_by_xpath("//*[contains(text(), '没有更多了')]")
+            is_end = is_end if is_end else self.driver.find_elements_by_xpath(
+                "//*[contains(text(), '没有满意结果？提问快速获得回答')]")
+            is_end = is_end if is_end else self.driver.page_source == prev_content
             if is_end:
                 logger.warning("Already hit end.")
                 break
@@ -116,15 +152,24 @@ class ZhihuSearch:
                 raise SearchException.RuntimeException(f"Fail to login after {timeout} seconds.")
         all_results = self.driver.find_elements_by_xpath("//div[@class='Card SearchResult-Card']")
         if strict:
-            output = [{'url': e.find_element_by_xpath("//meta[@itemprop='url']").get_attribute('content'),
-                       'name': e.find_element_by_xpath("//meta[@itemprop='name']").get_attribute('content'),
-                       'content_raw': e.text} for e in
-                      all_results if keyword in e.text]
+            output = [self.get_search_result_card_details(e) for e in all_results if
+                      keyword in e.text]
+            # output = [{'url': e.find_element_by_xpath("//meta[@itemprop='url']").get_attribute('content'),
+            #            'name': e.find_element_by_xpath("//meta[@itemprop='name']").get_attribute('content'),
+            #            'content_raw': e.text} for e in
+            #           all_results if keyword in e.text]
         else:
-            output = [{'url': e.find_element_by_xpath("//meta[@itemprop='url']").get_attribute('content'),
-                       'name': e.find_element_by_xpath("//meta[@itemprop='name']").get_attribute('content'),
-                       'content_raw': e.text} for e in all_results]
-        return output
+            output = [self.get_search_result_card_details(e) for e in
+                      all_results]
+            #
+            # output = [{'url': e.find_element_by_xpath("//meta[@itemprop='url']").get_attribute('content'),
+            #            'name': e.find_element_by_xpath("//meta[@itemprop='name']").get_attribute('content'),
+            #            'content_raw': e.text} for e in all_results]
+        output = [i for i in output if i is not None]
+        contents = None
+        if with_content:
+            contents = (self.retrieve_raw_content_from_url(o['url']) for o in output)
+        return output, contents
 
     def extract_url_arxiv(self, url):
         pass

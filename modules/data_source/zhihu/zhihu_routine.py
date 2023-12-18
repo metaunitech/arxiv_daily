@@ -1,4 +1,6 @@
 import os
+import heapq
+import tqdm
 try:
     from .zhihu_search import ZhihuSearch
     from .zhihu_login import ZhihuLogin
@@ -37,21 +39,51 @@ class ZhihuFlow:
         self.search_engine = ZhihuSearch(driver_instance=driver, if_headless=if_headless)
         logger.success('Login status refreshed.')
 
-    def search_keyword(self, keyword, with_content=False):
+    def search_keyword(self, keyword, with_content=False, max_count=None, strict=True, sorted_by_created_time=False):
         if self.search_engine is None:
             self.refresh_login_status(self.__account_name, self.__password, self.if_headless)
         try:
-            res = self.search_engine.search(keyword)
+            res, contents = self.search_engine.search(keyword, strict=strict, with_content=with_content,
+                                                      max_count=max_count, sorted_by_created_time=sorted_by_created_time)
         except:
             is_logged_in = self.search_engine.is_logged_in()
             if not is_logged_in:
                 self.refresh_login_status(self.__account_name, self.__password, self.if_headless)
-            res = self.search_engine.search(keyword)
-        return res
+            res, contents = self.search_engine.search(keyword, strict=strict, with_content=with_content,
+                                                      max_count=max_count, sorted_by_created_time=sorted_by_created_time)
+        return res, contents
+
+    def search_topic_arxivs(self, keyword, max_post_count=None, top_k=20, max_arxiv_count_per_post=10):
+        _, contents = self.search_keyword(keyword=f'{keyword} arxiv.org', with_content=True, max_count=max_post_count,
+                                          strict=False, sorted_by_created_time=True)
+        arxiv_ids = set()
+        for content in tqdm.tqdm(contents):
+            ids = self.search_engine.parse_arxiv_papers_in_page_content(content)
+            logger.debug(f"Found {len(ids)}")
+            if max_arxiv_count_per_post:
+                if len(ids)>=max_arxiv_count_per_post:
+                    logger.warning("Will skip current page. Found arxiv id num exceed max_arxiv_count_per_post. Might be useless.")
+                    continue
+            arxiv_ids.update(ids)
+
+        if top_k:
+            id_mentioned_count = {}
+            for id in tqdm.tqdm(arxiv_ids):
+                try:
+                    res, _ = self.search_keyword(keyword=id)
+                    id_mentioned_count[id] = len(res)
+                    logger.debug(f"{id} mentioned in {len(res)} posts.")
+                except Exception as e:
+                    logger.error(str(e))
+            items = list(id_mentioned_count.items())
+            top_k_kv = heapq.nlargest(top_k, items)
+            return [key for key, value in top_k_kv]
+
+        return list(arxiv_ids)
 
 
 if __name__ == "__main__":
-    ins = ZhihuFlow(Path(r"W:\arxiv_daily\configs\configs.yaml"))
+    ins = ZhihuFlow(Path(r"W:\Personal_Project\metaunitech\arxiv_daily\configs\configs.yaml"))
     ins.refresh_login_status('18516770170', '833020fan')
     res = ins.search_keyword('2308.13418v1')
     print(res)

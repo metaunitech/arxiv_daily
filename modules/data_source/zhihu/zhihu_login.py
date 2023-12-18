@@ -104,7 +104,7 @@ class ZhihuLogin:
 
             logger.debug(f"Insert: {cookie_dict}")
             self.driver.add_cookie(cookie_dict)
-        if if_flag_element_exists(self.driver, "//*[contains(text(), '开始验证')]"):
+        if if_flag_element_exists(self.driver, "//*[contains(text(), '开始验证')]", timeout=15):
             logger.error("You need to verify your account.")
             start_ts = time.time()
             while 1:
