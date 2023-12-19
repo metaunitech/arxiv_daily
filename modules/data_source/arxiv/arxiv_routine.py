@@ -8,6 +8,9 @@ from datetime import datetime
 from loguru import logger
 from pathlib import Path
 from modules.models.duration_utils import TIMEINTERVAL
+import ssl
+# This restores the same behavior as before.
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 class ArxivFlow:

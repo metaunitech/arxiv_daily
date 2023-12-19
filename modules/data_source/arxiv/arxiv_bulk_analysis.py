@@ -176,9 +176,11 @@ Output:
 
             if zhihu_instance:
                 query = paper.url.split('/')[-1]
+                if "v" in query:
+                    query = query.split('v')[0]
                 logger.info(f"Starts to search zhihu quote for {query}")
                 try:
-                    zhihu_results = zhihu_instance.search_keyword(query)
+                    zhihu_results, _  = zhihu_instance.search_keyword(query)
                 except Exception as e:
                     logger.warning(str(e))
                     zhihu_results = []

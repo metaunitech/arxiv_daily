@@ -12,9 +12,10 @@ import tenacity
 from tqdm import tqdm
 from func_timeout import func_set_timeout
 import logging
+logging.basicConfig(level=logging.DEBUG)
 import fitz
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
@@ -147,9 +148,10 @@ class PaperRetriever:
 
         try:
             return _download()
-        except:
+        except Exception as e:
             logger.error(f"Download timeout. {result_instance.title}")
-            raise Exception("Download timeout. ")
+            logger.debug(traceback.format_exc())
+            raise Exception(str(e))
 
     # def main(self, summary_regex=None,
     #          title_regex=None,
@@ -243,7 +245,11 @@ class PaperRetriever:
         download_res = {}
         download_history_dict = {}
         for res_ins in result_instance:
-            downloaded_path = self.download(res_ins)
+            try:
+                downloaded_path = self.download(res_ins)
+            except Exception as e:
+                logger.error(str(e))
+                continue
             download_res[res_ins.entry_id.split('/')[-1]] = [downloaded_path, res_ins]
             entry_dict = res_ins.__dict__
             info_dict = {i: entry_dict[i] for i in entry_dict.keys() if i[0] != '_'}
