@@ -34,9 +34,14 @@ for table in all_tables:
     table_name = table.__tablename__
     schema = table.__table_args__['schema']
     inspector = inspect(engine)
+    if schema not in inspector.get_schema_names():
+        # Schema doesn't exist, create it
+        engine.execute(f"CREATE SCHEMA {schema}")
+        logger.info(f"Schema '{schema}' created successfully.")
+
     # if table_name in inspector.get_table_names(schema=schema):
     if table_name in inspector.get_table_names(schema=schema):
-            logger.info(f"Table '{table_name}' already exists.")
+        logger.info(f"Table '{table_name}' already exists.")
     else:
         try:
             # 创建表结构
@@ -44,7 +49,6 @@ for table in all_tables:
             logger.info(f"Table '{table_name}' created successfully.")
         except OperationalError:
             logger.info(f"Table '{table_name}' creation failed.")
-
 
 # 创建会话
 Session = sessionmaker(bind=engine)

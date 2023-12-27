@@ -14,6 +14,8 @@ class AutoReply:
         if not date:
             date = datetime.now()
         files = glob(str(Path(self.storage_path) / str(date.strftime('%Y-%m-%d')) / "**" / "*.xmind"))
+        zipfiles = glob(str(Path(self.storage_path) / str(date.strftime('%Y-%m-%d')) / "**" / "*.zip"))
+        files.extend(zipfiles)
         all_files_result = {}
         for file in files:
             file_description = Path(file).parent / 'download_history.json'
@@ -42,3 +44,5 @@ class AutoReply:
         res = self.llm_engine.predict(prompt)
         return res
 
+if __name__ == "__main__":
+    ins = AutoReply()

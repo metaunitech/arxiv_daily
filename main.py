@@ -60,7 +60,7 @@ def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
                 wework.send_file(conversation_id, reports[k])
                 time.sleep(2)
             wework_instance.send_room_at_msg(conversation_id=conversation_id,
-                                             content='日报已发送完毕。',
+                                             content='日报已发送[正在上传，可能有一定延迟]。',
                                              at_list=[sender_user_id])
 
     # 判断消息不是自己发的并且不是群消息时，回复对方

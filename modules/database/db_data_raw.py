@@ -2,7 +2,6 @@ from modules.models.database import SingletonDatabase
 from modules.database.db_models import PaperSummaryResults
 from loguru import logger
 from pathlib import Path
-from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import exists
 from sqlalchemy.sql import func
 

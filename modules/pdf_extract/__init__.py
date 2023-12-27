@@ -750,7 +750,7 @@ def parsePDF_PDFFigures2(pdf_file: str):
     Parse figures from the given scientific PDF using pdffigures2
     """
     args = [
-        r"J:\java\bin\java",
+        r"C:\Program Files\Java\jdk-21\bin\java",
         "-jar",
         PDF_FIGURES_JAR_PATH,
         pdf_file,

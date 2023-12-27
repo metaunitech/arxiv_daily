@@ -231,6 +231,7 @@ Output:
                     paper_ins = Paper(path=paper_data[i]['downloaded_pdf_path'], url=i, title=title)
                 except Exception as e:
                     logger.warning(str(e))
+                    logger.debug(traceback.format_exc())
                     logger.warning(f"Will remove :{paper_data[i]['downloaded_pdf_path']}")
                     if Path(paper_data[i]['downloaded_pdf_path']).exists():
                         os.remove(paper_data[i]['downloaded_pdf_path'])
@@ -269,23 +270,29 @@ Output:
         if not workbook_path:
             logger.warning("No results. Removed batch")
             shutil.rmtree(batch_path)
-            return workbook_path
+            return None
         logger.info(f"Starts to shrink workbook: {workbook_path}")
+        current_size = os.path.getsize(workbook_path)
         for quality in range(10, 0, -1):
             if os.path.getsize(workbook_path) < 50 * 1024 * 1024:
                 break
             try:
-                logger.warning(f"Currently: {workbook_path} exceed max size. <{os.path.getsize(workbook_path)}B>")
-                xmind_shrink(str(workbook_path.absolute()))
+                logger.warning(
+                    f"Currently {quality}: {workbook_path} exceed max size. <{os.path.getsize(workbook_path)}B>")
+                xmind_shrink(str(workbook_path.absolute()), PNG_Quality=quality, use_pngquant=True)
+                if os.path.getsize(workbook_path) >= current_size:
+                    logger.error("Shrinking is useless")
+                    break
+                current_size = os.path.getsize(workbook_path)
             except Exception as e:
                 logger.warning(str(e))
-        if os.path.getsize(workbook_path) > 50 * 1024 * 1024:
+        if current_size > 50 * 1024 * 1024:
             logger.warning("Compressed file still exceed 50MB. Will zip it.")
             zip_path = workbook_path.parent / f"{str(workbook_path.stem)}.zip"
             zip_file = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
 
             # 将要压缩的文件添加到zip文件中
-            zip_file.write(zip_path)
+            zip_file.write(workbook_path)
 
             # 关闭zip文件
             zip_file.close()

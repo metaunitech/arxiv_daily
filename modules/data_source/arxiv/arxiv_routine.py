@@ -9,6 +9,7 @@ from loguru import logger
 from pathlib import Path
 from modules.models.duration_utils import TIMEINTERVAL
 import ssl
+
 # This restores the same behavior as before.
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -83,6 +84,7 @@ class ArxivFlow:
                                                              f"supported.")
         logger.debug(_time_interval_str)
         startTS, endTS = self.get_time_duration(_time_interval_str)
+        reports = {}
         for field in query_args_option:
             args = self.assemble_query_args(startTS=startTS,
                                             endTS=endTS,
@@ -92,8 +94,12 @@ class ArxivFlow:
             download_history_path = self.paper_retriever(**args)
             workbook_path = self.paper_analyzer(download_history_path=download_history_path,
                                                 zhihu_instance=zhihu_instance)
-
-            logger.success(f"{str(args)} downloaded to {workbook_path}")
+            if workbook_path:
+                logger.success(f"{str(args)} downloaded to {workbook_path}")
+                reports[field] = workbook_path
+            else:
+                logger.error(f"Cannot generate {field} report.")
+        return reports
 
     def diy_routine(self, query_args_option=None, time_interval_str=None, time_duration=None, id_list=None,
                     queries=None, field=None, zhihu_instance=None, bulk_description=None):
@@ -133,6 +139,7 @@ class ArxivFlow:
                                             zhihu_instance=zhihu_instance)
 
         logger.success(f"{str(args)} downloaded to {workbook_path}")
+        return {diy_field: workbook_path}
 
 
 if __name__ == "__main__":
