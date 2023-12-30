@@ -26,6 +26,8 @@ class ZhihuLogin:
             chrome_options = Options()
             if if_headless:
                 chrome_options.add_argument('--headless')
+            chrome_options.add_argument("--disable-popup-blocking")
+
             self.driver = uc.Chrome(options=chrome_options,
                                     driver_executable_path=DEFAULT_CHROMEDRIVER_PATH,
                                     version_main=DEFAULT_CHROMEDRIVER_VERSION)

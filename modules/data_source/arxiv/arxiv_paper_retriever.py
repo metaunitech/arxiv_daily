@@ -269,16 +269,16 @@ class PaperRetriever:
             return output_path
         return download_res
 
-    def download_by_quries(self, summary_regex=None,
-                           title_regex=None,
-                           journal_ref_regex=None,
-                           target_subject_category=None,
-                           target_primary_category=None,
-                           updated_time_range=None,
-                           diy_query_str=None,
-                           bulk_description=None,
-                           field=None,
-                           **kwargs):
+    def download_by_queries(self, summary_regex=None,
+                            title_regex=None,
+                            journal_ref_regex=None,
+                            target_subject_category=None,
+                            target_primary_category=None,
+                            updated_time_range=None,
+                            diy_query_str=None,
+                            bulk_description=None,
+                            field=None,
+                            **kwargs):
 
         download_history_dict = {}
 
@@ -351,35 +351,8 @@ class PaperRetriever:
             return self.download_by_arxiv_id(*args, **kwargs)
 
         else:
-            return self.download_by_quries(*args, **kwargs)
+            return self.download_by_queries(*args, **kwargs)
 
 
 if __name__ == "__main__":
-    llm_config_path = r'/configs/llm_configs.yaml'
-    import pytz
-
-    instance = PaperRetriever(".")
-    # 获取当前日期和时间
-    current_datetime = datetime.now()
-
-    # 计算昨天的日期
-    yesterday = current_datetime - timedelta(days=1)
-    # 设置时区
-    timezone = pytz.timezone('Asia/Shanghai')  # 用您所在时区替换'Your_Timezone'
-
-    # 获取昨天的0点时间
-    yesterday_start = timezone.localize(datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0))
-
-    # 获取今天的0点时间
-    today_start = timezone.localize(
-        datetime(current_datetime.year, current_datetime.month, current_datetime.day, 23, 59, 59))
-
-    # res = instance.retrieve_topic_w_regex(title="LLM", target_primary_category=['cs'],
-    #                                       updated_time_range=[yesterday_start, today_start])
-    # for i in res:
-    #     print(i)
-    # print(res)
-    instance.main(diy_query_str='all:Cognitive Architecture AND (abs:Agent OR abs:LLM)',
-                  # target_primary_category=['cs'],
-                  # updated_time_range=[yesterday_start, today_start],
-                  )
+    pass

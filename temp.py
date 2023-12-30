@@ -46,25 +46,34 @@
 #     # 关闭zip文件
 #     zip_file.close()
 
+"""Test job manager"""
+# import requests
+#
+# URL = "http://localhost:6160"
+#
+# # Test /generate_report API
+# data = {
+#     "jobType": "DEBUG",
+# }
+# dataw = {
+#     'jobs': []
+# }
+# response = requests.post(f"{URL}/generate_report", json=data)
+# print(response.json())
+#
+# # Test /all_supported_reports API
+# response = requests.post(f"{URL}/all_supported_reports")
+# print(response.json())
+#
+# # Test /check_current_jobs API
+# response = requests.get(f"{URL}/check_current_jobs")
+# print(response.json())
+"""Test zhihu"""
+from pathlib import Path
+from modules.data_source.zhihu.zhihu_routine import ZhihuFlow
 
-import requests
+CONFIG_PATH = Path(__file__).parent / 'configs' / 'configs.yaml'
 
-URL = "http://localhost:62620"
-
-# Test /generate_report API
-data = {
-    "jobType": "DEBUG",
-}
-dataw = {
-    'jobs': []
-}
-response = requests.post(f"{URL}/generate_report", json=data)
-print(response.json())
-
-# Test /all_supported_reports API
-response = requests.post(f"{URL}/all_supported_reports")
-print(response.json())
-
-# Test /check_current_jobs API
-response = requests.get(f"{URL}/check_current_jobs")
-print(response.json())
+zhihu_flow = ZhihuFlow(CONFIG_PATH)
+output, contents = zhihu_flow.search_keyword('2111.12294')
+print("HERE")

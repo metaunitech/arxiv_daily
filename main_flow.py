@@ -126,7 +126,7 @@ def main():
 
 if __name__ == "__main__":
     # selected_topics('大模型')
-    # selected_topics('多模态', 50)
-    main()
-    print("HERE")
-    logger.info("HERE")
+    selected_topics('智能体', 50)
+    # main()
+    # print("HERE")
+    # logger.info("HERE")

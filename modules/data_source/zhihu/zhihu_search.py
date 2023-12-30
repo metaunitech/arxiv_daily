@@ -74,7 +74,11 @@ class ZhihuSearch:
 
     def retrieve_raw_content_from_url(self, url):
         self.driver.get(url)
-        return self.driver.page_source
+        try:
+            text = self.driver.find_element(By.XPATH, '//*[@class="Post-content"]').text
+        except:
+            text = self.driver.page_source
+        return text
 
     @staticmethod
     def parse_arxiv_papers_in_page_content(raw_page_content: str):
@@ -132,9 +136,26 @@ class ZhihuSearch:
             if not current_cards:
                 logger.debug("No more current card on page. Break")
                 break
-            if strict and keyword not in current_cards[-1].text:
-                logger.warning("Keyword is not in last card. Break for strict mode")
-                break
+            if strict:
+                if keyword not in current_cards[-1].text:
+                    href = current_cards[-1].find_element(By.XPATH, './/a').get_attribute("href")
+                    if not href:
+                        logger.warning("Cannot get href for the res card.")
+                        break
+                    newtab = f'window.open("{href}");'
+                    self.driver.execute_script(newtab)
+                    self.driver.switch_to.window(self.driver.window_handles[-1])
+                    # text = self.driver.page_source
+                    text = self.driver.find_element(By.XPATH, '//*[@class="Post-content"]').text
+                    self.driver.close()
+                    self.driver.switch_to.window(self.driver.window_handles[0])
+                    keyword_regex = r'.*?'.join(keyword.split(' '))
+                    if not re.search(keyword_regex, text):
+                        logger.warning("Keyword is not in last card. Break for strict mode")
+                        break
+            # if strict and keyword not in current_cards[-1].text:
+            #     logger.warning("Keyword is not in last card. Break for strict mode")
+            #     break
             is_end = self.driver.find_elements_by_xpath("//*[contains(text(), '没有更多了')]")
             is_end = is_end if is_end else self.driver.find_elements_by_xpath(
                 "//*[contains(text(), '没有满意结果？提问快速获得回答')]")
@@ -152,19 +173,29 @@ class ZhihuSearch:
                 raise SearchException.RuntimeException(f"Fail to login after {timeout} seconds.")
         all_results = self.driver.find_elements_by_xpath("//div[@class='Card SearchResult-Card']")
         if strict:
-            output = [self.get_search_result_card_details(e) for e in all_results if
-                      keyword in e.text]
-            # output = [{'url': e.find_element_by_xpath("//meta[@itemprop='url']").get_attribute('content'),
-            #            'name': e.find_element_by_xpath("//meta[@itemprop='name']").get_attribute('content'),
-            #            'content_raw': e.text} for e in
-            #           all_results if keyword in e.text]
+            output = []
+            raw_output = [self.get_search_result_card_details(e) for e in
+                          all_results]
+            for res_dict in raw_output:
+                if not res_dict:
+                    continue
+                url = res_dict['url']
+                if not url:
+                    continue
+                newtab = f'window.open("{url}");'
+                self.driver.execute_script(newtab)
+                self.driver.switch_to.window(self.driver.window_handles[-1])
+                text = self.driver.find_element(By.XPATH, '//*[@class="Post-content"]').text
+                self.driver.close()
+                self.driver.switch_to.window(self.driver.window_handles[0])
+                keyword_regex = r'.*?'.join(keyword.split(' '))
+                if not re.search(keyword_regex, text):
+                    logger.error(f"Keyword {keyword_regex} not found.")
+                    continue
+                output.append(res_dict)
         else:
             output = [self.get_search_result_card_details(e) for e in
                       all_results]
-            #
-            # output = [{'url': e.find_element_by_xpath("//meta[@itemprop='url']").get_attribute('content'),
-            #            'name': e.find_element_by_xpath("//meta[@itemprop='name']").get_attribute('content'),
-            #            'content_raw': e.text} for e in all_results]
         output = [i for i in output if i is not None]
         contents = None
         if with_content:

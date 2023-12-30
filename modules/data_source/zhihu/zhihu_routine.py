@@ -1,6 +1,7 @@
 import os
 import heapq
 import tqdm
+
 try:
     from .zhihu_search import ZhihuSearch
     from .zhihu_login import ZhihuLogin
@@ -44,25 +45,32 @@ class ZhihuFlow:
             self.refresh_login_status(self.__account_name, self.__password, self.if_headless)
         try:
             res, contents = self.search_engine.search(keyword, strict=strict, with_content=with_content,
-                                                      max_count=max_count, sorted_by_created_time=sorted_by_created_time)
+                                                      max_count=max_count,
+                                                      sorted_by_created_time=sorted_by_created_time)
         except:
             is_logged_in = self.search_engine.is_logged_in()
             if not is_logged_in:
                 self.refresh_login_status(self.__account_name, self.__password, self.if_headless)
             res, contents = self.search_engine.search(keyword, strict=strict, with_content=with_content,
-                                                      max_count=max_count, sorted_by_created_time=sorted_by_created_time)
+                                                      max_count=max_count,
+                                                      sorted_by_created_time=sorted_by_created_time)
         return res, contents
 
     def search_topic_arxivs(self, keyword, max_post_count=None, top_k=20, max_arxiv_count_per_post=10):
-        _, contents = self.search_keyword(keyword=f'{keyword} arxiv.org', with_content=True, max_count=max_post_count,
+        _, contents = self.search_keyword(keyword=f'{keyword} arxiv', with_content=True, max_count=max_post_count,
                                           strict=False, sorted_by_created_time=True)
         arxiv_ids = set()
+        if not list(contents):
+            logger.warning("Will try normal search mode.")
+            _, contents = self.search_keyword(keyword=f'{keyword} arxiv', with_content=True, max_count=max_post_count,
+                                              strict=False, sorted_by_created_time=False)
         for content in tqdm.tqdm(contents):
             ids = self.search_engine.parse_arxiv_papers_in_page_content(content)
             logger.debug(f"Found {len(ids)}")
             if max_arxiv_count_per_post:
-                if len(ids)>=max_arxiv_count_per_post:
-                    logger.warning("Will skip current page. Found arxiv id num exceed max_arxiv_count_per_post. Might be useless.")
+                if len(ids) >= max_arxiv_count_per_post:
+                    logger.warning(
+                        "Will skip current page. Found arxiv id num exceed max_arxiv_count_per_post. Might be useless.")
                     continue
             arxiv_ids.update(ids)
 

@@ -46,7 +46,6 @@ def run_func_wrapper(report_type, kwargs, id, max_retries):
 
 @app.route('/')
 def hello_world():
-    "ef2b7f81fe3d89cb25103a856c50fd91"
     return "HERE"
 
 
@@ -62,8 +61,8 @@ def generate_reports():
 
     report_type = ReportTypes[jobType]
 
-    default_job_cycle_kwargs = report_type.default_job_cycle_kwargs
-    job_cycle_kwargs = default_job_cycle_kwargs if not job_cycle_kwargs else job_cycle_kwargs
+    _default_job_cycle_kwargs = report_type.default_job_cycle_kwargs
+    job_cycle_kwargs = _default_job_cycle_kwargs if not job_cycle_kwargs else job_cycle_kwargs
 
     for arg_name in report_type.mandatory_arg_names:
         if arg_name not in kwargs:
@@ -118,4 +117,4 @@ def remove_jobs():
 
 
 if __name__ == '__main__':
-    app.run("0.0.0.0", port=62620)  # 再启动Flask服务
+    app.run("0.0.0.0", port=6160)  # 再启动Flask服务
