@@ -55,6 +55,9 @@ URL = "http://localhost:62620"
 data = {
     "jobType": "DEBUG",
 }
+dataw = {
+    'jobs': []
+}
 response = requests.post(f"{URL}/generate_report", json=data)
 print(response.json())
 

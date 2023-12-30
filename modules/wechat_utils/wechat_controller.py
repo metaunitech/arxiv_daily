@@ -3,6 +3,9 @@ from glob import glob
 from datetime import datetime
 import json
 import re
+import requests
+
+URL = "http://localhost:62620"
 
 
 class AutoReply:
@@ -43,6 +46,33 @@ class AutoReply:
         prompt = f"""你是metaunitech的客服，你需要回答客户的问题。我会给你一些背景知识，请适当参考背景知识。\n背景知识：{background_info}\n如果没有背景知识可以借鉴，请按照常识回答，如果问题和背景知识无关请忽略背景知识。客户的输入：{msg}"""
         res = self.llm_engine.predict(prompt)
         return res
+
+    @staticmethod
+    def administrator_commands(msg):
+        if '查看任务' in msg:
+            response = requests.get(f"{URL}/check_current_jobs")
+            return response.text
+
+        elif '查看支持任务名' in msg:
+            response = requests.get(f"{URL}/all_supported_reports")
+            return response.text
+
+        elif '新增任务' in msg:
+            msg_match = re.match(r'新增任务 (.*)\s*', msg)
+            task_name = msg_match.group(1)
+            response = requests.post(f"{URL}/generate_report", json={
+                "jobType": task_name,
+            })
+            return response.text
+
+        elif '删除任务' in msg:
+            msg_match = re.match(r'删除任务 (.*)\s*', msg)
+            id = msg_match.group(1)
+            response = requests.post(f"{URL}/remove_job", json={'jobs_ids': [id]})
+            return response.text
+        else:
+            return '不支持任务'
+
 
 if __name__ == "__main__":
     ins = AutoReply()

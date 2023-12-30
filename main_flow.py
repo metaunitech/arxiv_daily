@@ -2,6 +2,8 @@ import time
 
 from modules.data_source.arxiv.arxiv_routine import ArxivFlow
 from modules.data_source.zhihu.zhihu_routine import ZhihuFlow
+from configs import CONFIG_DATA
+
 from pathlib import Path
 from loguru import logger
 from datetime import datetime
@@ -23,6 +25,20 @@ def selected_arxiv_ids(arxiv_ids, field, description):
                                   zhihu_instance=zhihu_flow, bulk_description=description)
 
 
+def selected_query_option_arxiv(query_args_option, startTS, endTS):
+    arxiv_flow = ArxivFlow(CONFIG_PATH)
+    zhihu_flow = ZhihuFlow(CONFIG_PATH)
+    return arxiv_flow.diy_routine(query_args_option=query_args_option, time_duration=[startTS, endTS],
+                                  zhihu_instance=zhihu_flow)
+
+
+def selected_query_arxiv(field, query_str, startTS, endTS):
+    arxiv_flow = ArxivFlow(CONFIG_PATH)
+    zhihu_flow = ZhihuFlow(CONFIG_PATH)
+    return arxiv_flow.diy_routine(queries=query_str, time_duration=[startTS, endTS],
+                                  zhihu_instance=zhihu_flow, field=field)
+
+
 def selected_topics(topic_name, max_post_count=100):
     arxiv_flow = ArxivFlow(CONFIG_PATH)
     zhihu_flow = ZhihuFlow(CONFIG_PATH)
@@ -39,8 +55,13 @@ def selected_topics(topic_name, max_post_count=100):
 
 def debug_method():
     logger.info("Starts debug")
-    time.sleep(5)
-    logger.success("Job finished.")
+    time.sleep(10)
+    cur_ts = int(time.time())
+    if cur_ts % 2 == 0:
+        logger.success("Job finished.")
+    else:
+        logger.error("Job failed.")
+        raise Exception("ERROR")
 
 
 class ReportTypes(Enum):
@@ -48,19 +69,34 @@ class ReportTypes(Enum):
     DAILY = 0
     SELECTED_ARXIV_IDS = 1
     SELECTED_ZHIHU_TOPICS_ARXIV = 2
+    SELECTED_QUERY_OPTION_ARXIV = 3
+    SELECTED_QUERY_ARXIV = 4
 
 
 ReportTypes.DEBUG.run_func = debug_method
 ReportTypes.DEBUG.mandatory_arg_names = []
+ReportTypes.DEBUG.default_job_cycle_kwargs = {'trigger': 'date'}
 
 ReportTypes.DAILY.run_func = daily_main
 ReportTypes.DAILY.mandatory_arg_names = []
+ReportTypes.DAILY.default_job_cycle_kwargs = {'trigger': 'cron',
+                                              'hour': '1'}
 
 ReportTypes.SELECTED_ARXIV_IDS.run_func = selected_arxiv_ids
 ReportTypes.SELECTED_ARXIV_IDS.mandatory_arg_names = ['arxiv_ids', 'field', 'description']
+ReportTypes.SELECTED_ARXIV_IDS.default_job_cycle_kwargs = {'trigger': 'date'}
 
 ReportTypes.SELECTED_ZHIHU_TOPICS_ARXIV.run_func = selected_topics
 ReportTypes.SELECTED_ZHIHU_TOPICS_ARXIV.mandatory_arg_names = ['topic_name']
+ReportTypes.SELECTED_ZHIHU_TOPICS_ARXIV.default_job_cycle_kwargs = {'trigger': 'date'}
+
+ReportTypes.SELECTED_QUERY_OPTION_ARXIV.run_func = selected_query_option_arxiv
+ReportTypes.SELECTED_QUERY_OPTION_ARXIV.mandatory_arg_names = ["query_args_option", "startTS", "endTS"]
+ReportTypes.SELECTED_QUERY_OPTION_ARXIV.default_job_cycle_kwargs = {'trigger': 'date'}
+
+ReportTypes.SELECTED_QUERY_ARXIV.run_func = selected_query_arxiv
+ReportTypes.SELECTED_QUERY_ARXIV.mandatory_arg_names = ["field", "query_str", "startTS", "endTS"]
+ReportTypes.SELECTED_QUERY_ARXIV.default_job_cycle_kwargs = {'trigger': 'date'}
 
 
 def main():
@@ -90,5 +126,7 @@ def main():
 
 if __name__ == "__main__":
     # selected_topics('大模型')
-    selected_topics('多模态', 50)
-    # main()
+    # selected_topics('多模态', 50)
+    main()
+    print("HERE")
+    logger.info("HERE")

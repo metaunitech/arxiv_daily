@@ -42,9 +42,12 @@ def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
     self_user_id = wework_instance.get_login_info()["user_id"]
     conversation_id: str = data["conversation_id"]
 
-    if sender_user_id == self_user_id and data['content'] == '发送日报':
-        reports = auto_instance.get_date_reports()
-        send_all_rooms(reports)
+    if sender_user_id == '7881300416934824':
+        reply = auto_instance.administrator_commands(data['content'])
+        wework_instance.send_text(conversation_id=conversation_id,
+                                  content=reply)
+    # reports = auto_instance.get_date_reports()
+    # send_all_rooms(reports)
 
     elif sender_user_id != self_user_id and '发送日报' in data['content'] and self_user_id in [i.get("user_id") for i in
                                                                                                data['at_list']]:
@@ -71,7 +74,7 @@ def on_recv_text_msg(wework_instance: ntwork.WeWork, message):
                                          at_list=[sender_user_id])
 
 
-send_report_time = [9, 0, 0]
+send_report_time = [8, 0, 0]
 try:
     while True:
         current_datetime = datetime.now()

@@ -22,5 +22,13 @@ UserType.Administrator.Duration = -1
 UserType.NormalUser.Duration = -1
 UserType.PaidUser.Duration = 86400 * 30
 
+
+class JobStatus(Enum):
+    ADDED = 0
+    FINISHED = 1
+    ERROR = 2
+    ONGOING = 3
+
+
 if __name__ == "__main__":
     print("HRE")

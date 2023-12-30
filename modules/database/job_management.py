@@ -53,7 +53,7 @@ class JobRecordManagement(SingletonDatabase):
         with self.session as session:
             job = session.query(JobRecord).filter_by(idx=job_idx).first()
             if job:
-                job.job_status = 'Finished'
+                job.job_status = 'FINISHED'
                 job.report_idx = report_idx
                 session.commit()
             else:
